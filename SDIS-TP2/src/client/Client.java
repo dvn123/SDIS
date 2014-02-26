@@ -8,7 +8,7 @@ import java.net.*;
 public class Client {
     private static final boolean LOG = true;
     private static final int MULTICAST_IP_POS = 0;
-    private static final int MULTICAST__PORT_POS = 1;
+    private static final int MULTICAST_PORT_POS = 1;
     private static final int OPERATION_POS = 2;
     private static final int STARTING_OPND_POS = 3;
     private static final int MAX_PACKET_SIZE = 1024;
@@ -27,13 +27,20 @@ public class Client {
         byte[] rd = new byte[MAX_PACKET_SIZE];
         DatagramPacket rp = new DatagramPacket(rd, rd.length);
         socket.receive(rp);
-        System.out.println("Received: " + new String(rp.getData()));
+        String response = new String(rp.getData());
+        if(LOG) {
+            if(response == "-1" || response == "NOT_FOUND" || response == "REJ") {
+                System.out.println(opnd + ":" + "ERROR");
+            } else
+                System.out.println(opnd + ":" + new String(rp.getData()));
+        }
+
         socket.close();
     }
 
     private void parse(String[] args) {
-        multicast_ip = args[0];
-        multicast_port = Integer.parseInt(args[1]);
+        multicast_ip = args[MULTICAST_IP_POS];
+        multicast_port = Integer.parseInt(args[MULTICAST_PORT_POS]);
 
         oper = args[OPERATION_POS];
 
@@ -45,9 +52,9 @@ public class Client {
     }
 
     private void send() {
-        if(LOG)       {
+        if(LOG)
             System.out.println("Sending - " + opnd);
-        }
+
         try {
             InetAddress addr = InetAddress.getByName(host_name);
             try {
@@ -90,7 +97,7 @@ public class Client {
         msocket.joinGroup(i);
         String ms;
         while(true) {
-            byte[] rd = new byte[1024];
+            byte[] rd = new byte[MAX_PACKET_SIZE];
             DatagramPacket rp = new DatagramPacket(rd, rd.length);
             msocket.receive(rp);
             System.out.println("Received: " + new String(rp.getData()));
@@ -98,12 +105,15 @@ public class Client {
             break;
         }
         String[] split_ms = ms.split(":");
-        if(LOG) {
-            System.out.println("split_ms[0] = " + split_ms[0]);
-            System.out.println("split_ms[1] = " + split_ms[1]);
-        } 
+
         host_name = split_ms[0];
         port = Integer.parseInt(split_ms[1]);
+
+        if(LOG) {
+            System.out.println("multicast: " + multicast_ip + " " + multicast_port + ":" + host_name + " " + port);
+        }
+
         msocket.leaveGroup(i);
+        msocket.close();
     }
 }
