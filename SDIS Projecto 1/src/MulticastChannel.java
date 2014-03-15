@@ -1,35 +1,34 @@
-package multicastControl;
-
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 
-public class MulticastControl extends Thread {
-
+public class MulticastChannel extends Thread {
     public static final boolean LOG = true;
 
-    private String mc_ip;
-    private int mc_port;
+    private String ip;
+    private String id;
+    private int port;
     private MulticastSocket m_socket;
     private int MAX_BUFFER_SIZE = 1024;
 
-    public MulticastControl(String mc_ip, int mc_port) {
-        if(LOG)
-            System.out.println("[MulticastControl] Creating");
-        this.mc_ip = mc_ip;
-        this.mc_port = mc_port;
+    public MulticastChannel(String ip, int port, String id) {
+        if (LOG)
+            System.out.println("[" + id + "] Creating IP - " + ip + " Port - " + port);
+        this.ip = ip;
+        this.port = port;
+        this.id = id;
 
         initialize_multicast();
     }
 
     private void initialize_multicast() {
-        if(LOG)
-            System.out.println("[MulticastControl] Initializing Socket");
+        if (LOG)
+            System.out.println("[" + id + "] Initializing Socket");
         try {
-            m_socket = new MulticastSocket(mc_port);
+            m_socket = new MulticastSocket(port);
             m_socket.setTimeToLive(1);
-            InetAddress group = InetAddress.getByName(mc_ip);
+            InetAddress group = InetAddress.getByName(ip);
             m_socket.joinGroup(group);
         } catch (IOException e) {
             System.err.println("Failed to initialize Multicast Control Socket. Exiting"); //TODO Error Control?
@@ -42,8 +41,8 @@ public class MulticastControl extends Thread {
     }
 
     private void listen() {
-        if(LOG)
-            System.out.println("[MulticastControl] Listening");
+        if (LOG)
+            System.out.println("[" + id + "] Listening");
         byte[] buf = new byte[MAX_BUFFER_SIZE];
         DatagramPacket recv = new DatagramPacket(buf, buf.length);
         try {
@@ -52,16 +51,15 @@ public class MulticastControl extends Thread {
             System.err.println("Failed trying to listen in Multicast Control channel. Exiting"); //TODO Error Control?
             System.exit(-1);
         }
-        if(LOG)
-            System.out.println("[MulticastControl] Processing - " + new String(recv.getData()).substring(0, recv.getLength()));
-        MulticastControlDataProcessing mcdt = new MulticastControlDataProcessing(new String(recv.getData()).substring(0, recv.getLength()), LOG);
-        mcdt.run();
+        if (LOG)
+            System.out.println("[" + id + "] Processing - " + new String(recv.getData()).substring(0, recv.getLength()));
+        MulticastDataProcessing mcdt = new MulticastDataProcessing(new String(recv.getData()).substring(0, recv.getLength()), LOG);
+        mcdt.start();
     }
 
     public void run() {
-        while(true) {
+        while (true) {
             listen();
         }
     }
-
 }

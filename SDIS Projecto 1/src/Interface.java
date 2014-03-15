@@ -1,9 +1,5 @@
-import multicastControl.MulticastControl;
-import multicastControl.MulticastControlMessageSending;
-import multicastControlBackup.MulticastControlBackup;
-import multicastControlRestore.MulticastControlRestore;
-
 import java.net.MulticastSocket;
+import java.util.Scanner;
 
 public class Interface {
     public static final int MULTICAST_CONTROL_IP_POS = 0;
@@ -13,58 +9,87 @@ public class Interface {
     public static final int MULTICAST_RESTORE_IP_POS = 4;
     public static final int MULTICAST_RESTORE_PORT_POS = 5;
     public static final boolean LOG = true;
+    public static final String VERSION = "0.5";
 
     String multicast_control_ip;
     int multicast_control_port;
-    String multicast_backup_ip;
-    int multicast_backup_port;
-    String multicast_restore_ip;
-    int multicast_restore_port;
+    String multicast_data_backup_ip;
+    int multicast_data_backup_port;
+    String multicast_data_restore_ip;
+    int multicast_data_restore_port;
 
     private MulticastSocket mc_socket;
     private MulticastSocket mcb_socket;
     private MulticastSocket mcr_socket;
 
-    Interface(String multicast_control_ip, int multicast_control_port, String multicast_backup_ip, int multicast_backup_port, String multicast_restore_ip, int multicast_restore_port) {
+    Interface(String multicast_control_ip, int multicast_control_port, String multicast_data_backup_ip, int multicast_data_backup_port, String multicast_data_restore_ip, int multicast_data_restore_port) {
         this.multicast_control_ip = multicast_control_ip;
         this.multicast_control_port = multicast_control_port;
-        this.multicast_backup_ip = multicast_backup_ip;
-        this.multicast_backup_port = multicast_backup_port;
-        this.multicast_restore_ip = multicast_restore_ip;
-        this.multicast_restore_port = multicast_restore_port;
+        this.multicast_data_backup_ip = multicast_data_backup_ip;
+        this.multicast_data_backup_port = multicast_data_backup_port;
+        this.multicast_data_restore_ip = multicast_data_restore_ip;
+        this.multicast_data_restore_port = multicast_data_restore_port;
     }
 
-    private void initialize_mc() {
-        MulticastControl mc = new MulticastControl(multicast_control_ip, multicast_control_port);
+    private void initialize_multicast_channels() {
+        MulticastChannel mc = new MulticastChannel(multicast_control_ip, multicast_control_port, "MulticastControl");
         mc_socket = mc.getM_socket();
         mc.start();
+
+        if (LOG)
+            System.out.println("[Interface] Created Multicast Control");
+
+        MulticastChannel mcb = new MulticastChannel(multicast_data_backup_ip, multicast_data_backup_port, "MulticastDataBackup");
+        mcb_socket = mcb.getM_socket();
+        mcb.start();
+
+        if (LOG)
+            System.out.println("[Interface] Created Multicast Data Backup");
+
+        MulticastChannel mcr = new MulticastChannel(multicast_data_restore_ip, multicast_data_restore_port, "MulticastDataRestore");
+        mcr_socket = mcr.getM_socket();
+        mcr.start();
+
+        if (LOG)
+            System.out.println("[Interface] Created Multicast Data Restore");
     }
 
-    private void initialize_mcb() {
-        MulticastControlBackup mcb = new MulticastControlBackup(multicast_control_ip, multicast_control_port);
-        mcb.run();
+    private void process_command(String cmd) {
+        String commands[] = cmd.toLowerCase().split(" ");
+        if (commands[0] == "backup") {
+
+        } else if (commands[0] == "restore") {
+
+        } else if (commands[0] == "delete") {
+
+        } else if (commands[0] == "free") {
+
+        }
     }
 
-    private void initialize_mcr() {
-        MulticastControlRestore mcr = new MulticastControlRestore(multicast_control_ip, multicast_control_port);
-        mcr.run();
-    }
+    private void keyboard() {
+        Scanner s = new Scanner(System.in);
+        while (true) {
+            System.out.println("Welcome to the Distributed File Backup System");
+            System.out.println("Possible Commands - \nbackup <file_name> <number_of_copies>\n restore <file_name>\ndelete file_name\nfree <n_bytes_to_free>");
+            String s1 = s.nextLine();
 
+            process_command(s1);
+        }
+    }
 
     public static void main(String[] args) {
-        if(args.length != 6) {
-            System.out.println("Usage: main <multicast_control_ip> <multicast_control_port> <multicast_backup_ip> <multicast_backup_port> <multicast_restore_ip> <multicast_restore_port>");
+        if (args.length != 6) {
+            System.out.println("Usage: main <multicast_control_ip> <multicast_control_port> <multicast_data_backup_ip> <multicast_data_backup_port> <multicast_data_restore_ip> <multicast_data_restore_port>");
             System.exit(-1);
         }
 
         //TODO verify arguments;
 
         Interface i = new Interface(args[MULTICAST_CONTROL_IP_POS], Integer.parseInt(args[MULTICAST_CONTROL_PORT_POS]), args[MULTICAST_BACKUP_IP_POS], Integer.parseInt(args[MULTICAST_BACKUP_PORT_POS]), args[MULTICAST_RESTORE_IP_POS], Integer.parseInt(args[MULTICAST_RESTORE_PORT_POS]));
-        i.initialize_mc();
+        i.initialize_multicast_channels();
 
-        MulticastControlMessageSending m = new MulticastControlMessageSending("asd", i.mc_socket, i.multicast_control_ip, i.multicast_control_port, LOG);
-        m.run();
-        //i.initialize_mcb();
-        //i.initialize_mcr();
+        //MulticastMessageSending m = new MulticastMessageSending("asd", i.mc_socket, i.multicast_control_ip, i.multicast_control_port, LOG);
+        //m.start();
     }
 }
