@@ -1,5 +1,10 @@
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.net.MulticastSocket;
 import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Interface {
     public static final int MULTICAST_CONTROL_IP_POS = 0;
@@ -17,6 +22,8 @@ public class Interface {
     int multicast_data_backup_port;
     String multicast_data_restore_ip;
     int multicast_data_restore_port;
+
+    float space;
 
     private MulticastSocket mc_socket;
     private MulticastSocket mcb_socket;
@@ -78,6 +85,28 @@ public class Interface {
         }
     }
 
+    public void read_file() {
+        final File file = new File("conf");
+
+        final Scanner scanner;
+        try {
+            scanner = new Scanner(file);
+            Pattern p = Pattern.compile( "SPACE: (.*)" );
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine();
+                Matcher m = p.matcher(line);
+                if (m.find()) {
+                    space = Float.parseFloat(m.group(1));
+                    if(LOG)
+                        System.out.println("[Interface] Space - " + space);
+                }
+            }
+        } catch (FileNotFoundException e) {
+            System.out.println("Configuration file not found. Using default space of 128MB");
+        }
+
+    }
+
     public static void main(String[] args) {
         if (args.length != 6) {
             System.out.println("Usage: main <multicast_control_ip> <multicast_control_port> <multicast_data_backup_ip> <multicast_data_backup_port> <multicast_data_restore_ip> <multicast_data_restore_port>");
@@ -88,8 +117,15 @@ public class Interface {
 
         Interface i = new Interface(args[MULTICAST_CONTROL_IP_POS], Integer.parseInt(args[MULTICAST_CONTROL_PORT_POS]), args[MULTICAST_BACKUP_IP_POS], Integer.parseInt(args[MULTICAST_BACKUP_PORT_POS]), args[MULTICAST_RESTORE_IP_POS], Integer.parseInt(args[MULTICAST_RESTORE_PORT_POS]));
         i.initialize_multicast_channels();
+        i.read_file();
 
         //MulticastMessageSending m = new MulticastMessageSending("asd", i.mc_socket, i.multicast_control_ip, i.multicast_control_port, LOG);
         //m.start();
+
+        Delete d = new Delete("asd", 3, i.mc_socket, i.multicast_control_ip, i.multicast_control_port);
+        d.start();
+
+
+        d.increment_deleted();
     }
 }

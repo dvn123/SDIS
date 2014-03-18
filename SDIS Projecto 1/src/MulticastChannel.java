@@ -6,6 +6,8 @@ import java.net.MulticastSocket;
 public class MulticastChannel extends Thread {
     public static final boolean LOG = true;
 
+
+
     private String ip;
     private String id;
     private int port;
