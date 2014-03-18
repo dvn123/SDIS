@@ -63,22 +63,28 @@ public class Interface {
 
     private void process_command(String cmd) {
         String commands[] = cmd.toLowerCase().split(" ");
-        if (commands[0] == "backup") {
+        if (commands[0].equals("backup")) {
 
-        } else if (commands[0] == "restore") {
+            return;
+        } else if (commands[0].equals("restore")) {
 
-        } else if (commands[0] == "delete") {
+            return;
+        } else if (commands[0].equals("delete")) {
 
-        } else if (commands[0] == "free") {
+            return;
+        } else if (commands[0].equals("free")) {
 
+            return;
         }
+        System.err.println("Invalid command, try again.");
     }
 
     private void keyboard() {
+        System.out.println("Welcome to the Distributed File Backup System\n");
+        System.out.println("Possible Commands:\nbackup <file_name> <number_of_copies>\nrestore <file_name>\ndelete file_name\nfree <n_bytes_to_free>");
         Scanner s = new Scanner(System.in);
         while (true) {
-            System.out.println("Welcome to the Distributed File Backup System");
-            System.out.println("Possible Commands - \nbackup <file_name> <number_of_copies>\n restore <file_name>\ndelete file_name\nfree <n_bytes_to_free>");
+
             String s1 = s.nextLine();
 
             process_command(s1);
@@ -118,6 +124,8 @@ public class Interface {
         Interface i = new Interface(args[MULTICAST_CONTROL_IP_POS], Integer.parseInt(args[MULTICAST_CONTROL_PORT_POS]), args[MULTICAST_BACKUP_IP_POS], Integer.parseInt(args[MULTICAST_BACKUP_PORT_POS]), args[MULTICAST_RESTORE_IP_POS], Integer.parseInt(args[MULTICAST_RESTORE_PORT_POS]));
         i.initialize_multicast_channels();
         i.read_file();
+
+        i.keyboard();
 
         //MulticastMessageSending m = new MulticastMessageSending("asd", i.mc_socket, i.multicast_control_ip, i.multicast_control_port, LOG);
         //m.start();
