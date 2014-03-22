@@ -41,7 +41,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.MulticastSocket;
 
 public class BackupReceive extends Thread {
-
     static String msg_received;
     static String[] split_msg;
     static String msg_returned;
