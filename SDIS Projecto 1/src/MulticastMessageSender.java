@@ -8,7 +8,6 @@ public class MulticastMessageSender extends Thread {
     private String message;
     DatagramPacket p;
     private MulticastSocket m_socket;
-    private boolean LOG;
     String ip;
     int port;
 
@@ -17,7 +16,6 @@ public class MulticastMessageSender extends Thread {
     }
 
     public MulticastMessageSender(MulticastSocket m_socket, String ip, int port, boolean LOG) {
-        this.LOG = LOG;
         this.m_socket = m_socket;
         this.ip = ip;
         this.port = port;
@@ -37,7 +35,7 @@ public class MulticastMessageSender extends Thread {
 
     private void send_message() throws IOException {
         create_datagram();
-        if(LOG)
+        if(MulticastProcessor.LOG)
             System.out.println("[MulticastMessageSender] Sending Message");
         m_socket.send(p);
     }
@@ -45,7 +43,7 @@ public class MulticastMessageSender extends Thread {
     public void send_message(String message)  {
         this.message = message;
         create_datagram();
-        if(LOG)
+        if(MulticastProcessor.LOG)
             System.out.println("[MulticastMessageSender] Sending Message");
         try {
             m_socket.send(p);

@@ -29,4 +29,8 @@ public class Interface extends Thread {
             buffer.add(s1.toLowerCase());
         }
     }
+
+    public void run() {
+        keyboard();
+    }
 }

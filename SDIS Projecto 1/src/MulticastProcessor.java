@@ -26,14 +26,18 @@ public class MulticastProcessor {
     public static final int MULTICAST_RESTORE_IP_POS = 4;
     public static final int MULTICAST_RESTORE_PORT_POS = 5;
 
+    public static final int MAX_CHUNK_SIZE = 64000;
+
     ArrayList<String> buffer;
     ArrayList<String> stored_messages;
     float space;
 
+    final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
+
     MulticastMessageSender mcs;
     MulticastMessageSender mcbs;
     MulticastMessageSender mcrs;
-    HashMap<String, byte[]> file_ids = new HashMap<String, byte[]>();
+    HashMap<String, char[]> file_ids = new HashMap<String, char[]>();
     private MulticastChannel mc;
     private MulticastChannel mcb;
     private MulticastChannel mcr;
@@ -49,26 +53,27 @@ public class MulticastProcessor {
 
     private void initialize_multicast_channels(String multicast_control_ip, int multicast_control_port, String multicast_data_backup_ip, int multicast_data_backup_port, String multicast_data_restore_ip, int multicast_data_restore_port) {
         buffer = new ArrayList<String>();
+        stored_messages = new ArrayList<String>();
         mc = new MulticastChannel(multicast_control_ip, multicast_control_port, buffer, "MulticastControl");
         MulticastSocket mc_socket = mc.getM_socket();
         mc.start();
         mcs = new MulticastMessageSender(mc_socket, multicast_control_ip, multicast_control_port);
         if (LOG)
-            System.out.println("[Interface] Created Multicast Control");
+            System.out.println("[MulticastProcessor] Created Multicast Control");
 
         mcb = new MulticastChannel(multicast_data_backup_ip, multicast_data_backup_port, buffer, "MulticastDataBackup");
         MulticastSocket mcb_socket = mcb.getM_socket();
         mcb.start();
         mcbs = new MulticastMessageSender(mcb_socket, multicast_data_backup_ip, multicast_data_backup_port);
         if (LOG)
-            System.out.println("[Interface] Created Multicast Data BackupReceive");
+            System.out.println("[MulticastProcessor] Created Multicast Data BackupReceive");
 
         mcr = new MulticastChannel(multicast_data_restore_ip, multicast_data_restore_port, buffer, "MulticastDataRestore");
         MulticastSocket mcr_socket = mcr.getM_socket();
         mcr.start();
         mcrs = new MulticastMessageSender(mcr_socket, multicast_data_restore_ip, multicast_data_restore_port);
         if (LOG)
-            System.out.println("[Interface] Created Multicast Data Restore");
+            System.out.println("[MulticastProcessor] Created Multicast Data Restore");
     }
 
     public void read_file() {
@@ -84,7 +89,7 @@ public class MulticastProcessor {
                 if (m.find()) {
                     space = Float.parseFloat(m.group(1));
                     if (LOG)
-                        System.out.println("[Interface] Space - " + space);
+                        System.out.println("[MulticastProcessor] Space - " + space);
                 }
             }
         } catch (FileNotFoundException e) {
@@ -92,8 +97,9 @@ public class MulticastProcessor {
         }
     }
 
-    private byte[] create_file_id(File file) {
+    private char[] create_file_id(File file) {
         Path p = Paths.get(file.getAbsolutePath());
+        System.out.println(p);
         BasicFileAttributes view = null;
         try {
             view = Files.getFileAttributeView(p, BasicFileAttributeView.class).readAttributes();
@@ -112,8 +118,16 @@ public class MulticastProcessor {
             e.printStackTrace();
         }
 
-        file_ids.put(file.getName(), id); //guardar file_ids num map
-        return id;
+
+
+        char[] hexChars = new char[id.length * 2];
+        for (int j = 0; j < id.length; j++) {
+            int v = id[j] & 0xFF;
+            hexChars[j * 2] = hexArray[v >>> 4];
+            hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+        }
+        file_ids.put(file.getName(), hexChars); //guardar file_ids num map
+        return hexChars;
     }
 
     private int process_message(String message) {
@@ -125,7 +139,7 @@ public class MulticastProcessor {
         String[] msg = message.split(" ");
 
         if (msg[0].equals("PUTCHUNK")) {
-            BackupReceive b = new BackupReceive(mcs);
+            BackupReceive b = new BackupReceive(mcs, message);
             b.start();
             return 0;
         } else if (msg[0].equals("RESTORE")) {
@@ -151,18 +165,34 @@ public class MulticastProcessor {
     private void process_keyboard_command(String cmd) {
         String commands[] = cmd.toLowerCase().split(" ");
         if (commands[0].equals("backup")) {
+            if(commands.length != 3) {
+                System.err.println("Invalid command, try again.");
+                return;
+            }
             File f = new File(commands[1]);
-            byte[] id = create_file_id(f);
+            char[] id = create_file_id(f);
             BackupSend bs = new BackupSend(mcbs, id, f, Integer.parseInt(commands[2]), stored_messages);
+            bs.start();
             return;
         } else if (commands[0].equals("restore")) {
-
+            if(commands.length != 2) {
+                System.err.println("Invalid command, try again.");
+                return;
+            }
             return;
         } else if (commands[0].equals("delete")) {
+            if(commands.length != 2) {
+                System.err.println("Invalid command, try again.");
+                return;
+            }
             //get file identifier
             //TODO
             return;
         } else if (commands[0].equals("free")) {
+            if(commands.length != 2) {
+                System.err.println("Invalid command, try again.");
+                return;
+            }
 
             return;
         }

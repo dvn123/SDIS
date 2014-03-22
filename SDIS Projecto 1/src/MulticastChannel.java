@@ -5,8 +5,6 @@ import java.net.MulticastSocket;
 import java.util.ArrayList;
 
 public class MulticastChannel extends Thread {
-    public static final boolean LOG = true;
-
     private String ip;
     private String id;
     private int port;
@@ -15,7 +13,7 @@ public class MulticastChannel extends Thread {
     private ArrayList<String> buffer;
 
     public MulticastChannel(String ip, int port, ArrayList<String> buffer, String id) {
-        if (LOG)
+        if (MulticastProcessor.LOG)
             System.out.println("[" + id + "] Creating IP - " + ip + " Port - " + port);
         this.ip = ip;
         this.port = port;
@@ -26,7 +24,7 @@ public class MulticastChannel extends Thread {
     }
 
     private void initialize_multicast() {
-        if (LOG)
+        if (MulticastProcessor.LOG)
             System.out.println("[" + id + "] Initializing Socket");
         try {
             m_socket = new MulticastSocket(port);
@@ -44,7 +42,7 @@ public class MulticastChannel extends Thread {
     }
 
     private void listen() {
-        if (LOG)
+        if (MulticastProcessor.LOG)
             System.out.println("[" + id + "] Listening");
         byte[] buf = new byte[MAX_BUFFER_SIZE];
         DatagramPacket recv = new DatagramPacket(buf, buf.length);
@@ -54,7 +52,7 @@ public class MulticastChannel extends Thread {
             System.err.println("Failed trying to listen in Multicast Control channel. Exiting"); //TODO Error Control?
             System.exit(-1);
         }
-        if (LOG)
+        if (MulticastProcessor.LOG)
             System.out.println("[" + id + "] Processing - " + new String(recv.getData()).substring(0, recv.getLength()));
         buffer.add(new String(recv.getData()).substring(0, recv.getLength()));
     }
