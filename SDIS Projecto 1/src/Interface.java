@@ -1,10 +1,16 @@
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
+import java.io.UnsupportedEncodingException;
 import java.net.MulticastSocket;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributeView;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
 import java.util.Scanner;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class Interface {
     public static final int MULTICAST_CONTROL_IP_POS = 0;
@@ -22,55 +28,63 @@ public class Interface {
     int multicast_data_backup_port;
     String multicast_data_restore_ip;
     int multicast_data_restore_port;
-
-    float space;
-
     private MulticastSocket mc_socket;
     private MulticastSocket mcb_socket;
-    private MulticastSocket mcr_socket;
+    //private MulticastSocket mcr_socket;
+    private MulticastChannel mc;
+    private MulticastChannel mcb;
+    //private MulticastChannel mcr;
+
+    HashMap<String,byte[]> file_ids = new HashMap<String,byte[]>();
 
     Interface(String multicast_control_ip, int multicast_control_port, String multicast_data_backup_ip, int multicast_data_backup_port, String multicast_data_restore_ip, int multicast_data_restore_port) {
+        MulticastDataProcessing mdp = new MulticastDataProcessing(multicast_control_ip, multicast_control_port, multicast_data_backup_ip, multicast_data_backup_port, multicast_data_restore_ip, multicast_data_restore_port);
+        mdp.start();
         this.multicast_control_ip = multicast_control_ip;
         this.multicast_control_port = multicast_control_port;
         this.multicast_data_backup_ip = multicast_data_backup_ip;
         this.multicast_data_backup_port = multicast_data_backup_port;
-        this.multicast_data_restore_ip = multicast_data_restore_ip;
-        this.multicast_data_restore_port = multicast_data_restore_port;
+        //this.multicast_data_restore_ip = multicast_data_restore_ip;
+        //this.multicast_data_restore_port = multicast_data_restore_port;
     }
 
-    private void initialize_multicast_channels() {
-        MulticastChannel mc = new MulticastChannel(multicast_control_ip, multicast_control_port, "MulticastControl");
-        mc_socket = mc.getM_socket();
-        mc.start();
+    private void create_file_id(File file) {
+        Path p = Paths.get(file.getAbsolutePath());
+        BasicFileAttributes view = null;
+        try {
+            view = Files.getFileAttributeView(p, BasicFileAttributeView.class).readAttributes();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        FileTime fileTime=view.lastAccessTime();
 
-        if (LOG)
-            System.out.println("[Interface] Created Multicast Control");
+        String s = file.getAbsolutePath() + fileTime.toString();
 
-        MulticastChannel mcb = new MulticastChannel(multicast_data_backup_ip, multicast_data_backup_port, "MulticastDataBackup");
-        mcb_socket = mcb.getM_socket();
-        mcb.start();
-
-        if (LOG)
-            System.out.println("[Interface] Created Multicast Data Backup");
-
-        MulticastChannel mcr = new MulticastChannel(multicast_data_restore_ip, multicast_data_restore_port, "MulticastDataRestore");
-        mcr_socket = mcr.getM_socket();
-        mcr.start();
-
-        if (LOG)
-            System.out.println("[Interface] Created Multicast Data Restore");
+        MessageDigest digest = null;
+        try {
+            digest = MessageDigest.getInstance("SHA-256");
+            try {
+                byte[] hash = digest.digest(s.getBytes("UTF-8"));
+                file_ids.put(file.getName(), hash);
+            } catch (UnsupportedEncodingException e) {
+                System.err.println("This computer doesn't support UTF-8");
+            }
+        } catch (NoSuchAlgorithmException e) {
+            System.err.println("This computer doesn't support SHA-256");
+        }
     }
 
     private void process_command(String cmd) {
         String commands[] = cmd.toLowerCase().split(" ");
         if (commands[0].equals("backup")) {
-
+            backup(commands);
             return;
         } else if (commands[0].equals("restore")) {
 
             return;
         } else if (commands[0].equals("delete")) {
-
+            //get file identifier
+            //TODO
             return;
         } else if (commands[0].equals("free")) {
 
@@ -79,38 +93,18 @@ public class Interface {
         System.err.println("Invalid command, try again.");
     }
 
+    private void backup(String[] commands) {
+        //create_file_id(commands[1]);
+    }
+
     private void keyboard() {
-        System.out.println("Welcome to the Distributed File Backup System\n");
+        System.out.println("Welcome to the Distributed File BackupReceive System\n");
         System.out.println("Possible Commands:\nbackup <file_name> <number_of_copies>\nrestore <file_name>\ndelete file_name\nfree <n_bytes_to_free>");
         Scanner s = new Scanner(System.in);
         while (true) {
-
             String s1 = s.nextLine();
-
             process_command(s1);
         }
-    }
-
-    public void read_file() {
-        final File file = new File("conf");
-
-        final Scanner scanner;
-        try {
-            scanner = new Scanner(file);
-            Pattern p = Pattern.compile( "SPACE: (.*)" );
-            while (scanner.hasNextLine()) {
-                String line = scanner.nextLine();
-                Matcher m = p.matcher(line);
-                if (m.find()) {
-                    space = Float.parseFloat(m.group(1));
-                    if(LOG)
-                        System.out.println("[Interface] Space - " + space);
-                }
-            }
-        } catch (FileNotFoundException e) {
-            System.out.println("Configuration file not found. Using default space of 128MB");
-        }
-
     }
 
     public static void main(String[] args) {
@@ -122,18 +116,6 @@ public class Interface {
         //TODO verify arguments;
 
         Interface i = new Interface(args[MULTICAST_CONTROL_IP_POS], Integer.parseInt(args[MULTICAST_CONTROL_PORT_POS]), args[MULTICAST_BACKUP_IP_POS], Integer.parseInt(args[MULTICAST_BACKUP_PORT_POS]), args[MULTICAST_RESTORE_IP_POS], Integer.parseInt(args[MULTICAST_RESTORE_PORT_POS]));
-        i.initialize_multicast_channels();
-        i.read_file();
-
         i.keyboard();
-
-        //MulticastMessageSending m = new MulticastMessageSending("asd", i.mc_socket, i.multicast_control_ip, i.multicast_control_port, LOG);
-        //m.start();
-
-        Delete d = new Delete("asd", 3, i.mc_socket, i.multicast_control_ip, i.multicast_control_port);
-        d.start();
-
-
-        d.increment_deleted();
     }
 }

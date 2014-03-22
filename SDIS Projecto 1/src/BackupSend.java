@@ -1,4 +1,7 @@
+import org.omg.CORBA.INTERNAL;
+
 import java.io.*;
+import java.net.MulticastSocket;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -7,21 +10,20 @@ import java.nio.file.attribute.*;
 import java.nio.file.Files;
 
 
-public class FileBreaker {
+public class BackupSend {
 
     final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
-    static FileInputStream fis = null;
-    static FileOutputStream fos = null;
+    FileInputStream fis = null;
+    FileOutputStream fos = null;
 
-    /*
-    public static void main(String args[]) throws IOException {
+    MulticastMessageSender mcs;
 
-        breakFile("C:/Users/Carlos/Documents/IntelliJ Workspace/SDIS Proj/testfolder/txt.txt");
-
+    BackupSend(MulticastMessageSender mcs) {
+        this.mcs = mcs;
     }
-    */
 
-    public static void breakFile(String sourceFilePath) throws IOException {
+
+    public void breakFile(String sourceFilePath) throws IOException {
 
         int chunkCount = 0;
 
@@ -97,6 +99,12 @@ public class FileBreaker {
         System.out.println(hexChars);
     }
 
+    private void send_chunks(Byte[] b) {
+        for (int i = 0; i < b.length; i++) {
+            mcs.send_message("PUTCHUNK " + Interface.VERSION + " fileId" + b[i] + "\n\n ");
+        }
+    }
+
     private static String createFileId(String sourceFilePath) throws IOException {
 
         Path file = Paths.get(sourceFilePath);
@@ -109,7 +117,6 @@ public class FileBreaker {
         String ret = new String("" + attr.creationTime() + attr.lastAccessTime() + attr.lastModifiedTime());
 
         return ret;
-
     }
 
     public static char[] getChars(byte[] hash) {

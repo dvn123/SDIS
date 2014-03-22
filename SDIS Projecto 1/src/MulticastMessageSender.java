@@ -4,7 +4,7 @@ import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.UnknownHostException;
 
-public class MulticastMessageSending extends Thread {
+public class MulticastMessageSender extends Thread {
     private String message;
     DatagramPacket p;
     private MulticastSocket m_socket;
@@ -12,15 +12,17 @@ public class MulticastMessageSending extends Thread {
     String ip;
     int port;
 
+    public MulticastMessageSender(MulticastSocket m_socket, String ip, int port) {
+        this(m_socket, ip, port, false);
+    }
 
-    public MulticastMessageSending(String message, MulticastSocket m_socket, String ip, int port, boolean LOG) {
+    public MulticastMessageSender(MulticastSocket m_socket, String ip, int port, boolean LOG) {
         this.LOG = LOG;
-        this.message = message;
         this.m_socket = m_socket;
         this.ip = ip;
         this.port = port;
         if(LOG)
-            System.out.println("[MulticastMessageSending] Creating");
+            System.out.println("[MulticastMessageSender] Creating");
     }
 
     private void create_datagram() {
@@ -34,17 +36,29 @@ public class MulticastMessageSending extends Thread {
     }
 
     private void send_message() throws IOException {
+        create_datagram();
         if(LOG)
-            System.out.println("[MulticastMessageSending] Sending Message");
+            System.out.println("[MulticastMessageSender] Sending Message");
         m_socket.send(p);
     }
 
-    public void run() {
+    public void send_message(String message)  {
+        this.message = message;
         create_datagram();
+        if(LOG)
+            System.out.println("[MulticastMessageSender] Sending Message");
+        try {
+            m_socket.send(p);
+        } catch (IOException e) {
+            System.err.println("Failed to send message.");
+        }
+    }
+
+    public void run() {
         try {
             send_message();
         } catch (IOException e) {
-            System.err.println("Failed sending message.");
+            System.err.println("Failed to send message.");
         }
     }
 

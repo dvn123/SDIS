@@ -34,32 +34,38 @@ Body . Max Size 64KByte
 
  */
 
-import java.io.*;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.MulticastSocket;
 
-public class Backup extends Thread{
+public class BackupReceive extends Thread {
 
+    static String msg_received;
+    static String[] split_msg;
+    static String msg_returned;
     final char CR = '\r';
     final char LF = '\n';
     char[] version = new char[3];
     char[] fileId = new char[256];
     //int replicationDeg;
     int chunkNo;
-    static String msg_received;
-    static String[] split_msg;
-    static String msg_returned;
+    MulticastMessageSender mcs;
 
-    MulticastSocket mc_socket;
-    String multicast_control_ip;
-    int multicast_control_port;
-
-    Backup( MulticastSocket mc_socket, String multicast_control_ip, int multicast_control_port) {
-        this.mc_socket = mc_socket;
-        this.multicast_control_ip = multicast_control_ip;
-        this.multicast_control_port = multicast_control_port;
+    BackupReceive(MulticastMessageSender mcs) {
+        this.mcs = mcs;
     }
 
-    public void run(){
+    private static void parse_msg() {
+        split_msg = msg_received.split("\\s+");
+
+        for (int i = 0; i < split_msg.length; i++) {
+            System.out.println("Split " + i + ": " + split_msg[i]);
+        }
+    }
+
+    public void run() {
 
         //Receber PUTCHUNK do canal multicast.
         //msg_received = "PUTCHUNK 1.0 2012 9 \r\n \r\n bodyz";
@@ -69,7 +75,7 @@ public class Backup extends Thread{
 
         //Random delay (100ms - 400ms)
         try {
-            Thread.sleep(100 + (int)(Math.random() * ((400 - 100) + 1)));
+            Thread.sleep(100 + (int) (Math.random() * ((400 - 100) + 1)));
         } catch (InterruptedException e) {
             System.out.println("Error sleeping.");
         }
@@ -78,7 +84,7 @@ public class Backup extends Thread{
 
         byte dataToWrite[] = null;
         try {
-            dataToWrite =  split_msg[4].getBytes("UTF-8");
+            dataToWrite = split_msg[4].getBytes("UTF-8");
         } catch (UnsupportedEncodingException ioe) {
             System.out.println("Error converting data.");
         }
@@ -88,8 +94,7 @@ public class Backup extends Thread{
 
         try {
             out = new FileOutputStream(split_msg[2]);
-        }
-        catch (FileNotFoundException ioe) {
+        } catch (FileNotFoundException ioe) {
             System.out.println("Error while creating file " + ioe);
         }
 
@@ -105,18 +110,8 @@ public class Backup extends Thread{
         msg_returned = answer();
     }
 
-    private static void parse_msg() {
-        split_msg = msg_received.split("\\s+");
-
-        for(int i = 0; i < split_msg.length; i++)
-        {
-            System.out.println("Splitted " + i + ": " + split_msg[i]);
-        }
-    }
-
-    private String answer()
-    {
-        String answer = "STORED " + version + " " +  fileId + " " + chunkNo + CR + LF + " " + CR + LF;
+    private String answer() {
+        String answer = "STORED " + version + " " + fileId + " " + chunkNo + CR + LF + " " + CR + LF;
         System.out.println("ANSWER: " + answer);
 
         return answer;
@@ -124,8 +119,7 @@ public class Backup extends Thread{
 
     private void send_message(String answer) {
 
-        MulticastMessageSending m = new MulticastMessageSending(msg_returned, mc_socket, multicast_control_ip, multicast_control_port, false);
-        m.start();
+        mcs.send_message(msg_returned);
         try {
             Thread.sleep(30000);
         } catch (InterruptedException e) {

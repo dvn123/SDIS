@@ -2,19 +2,19 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.util.ArrayList;
 
 public class MulticastChannel extends Thread {
     public static final boolean LOG = true;
-
-
 
     private String ip;
     private String id;
     private int port;
     private MulticastSocket m_socket;
     private int MAX_BUFFER_SIZE = 1024;
+    private ArrayList<String> buffer;
 
-    public MulticastChannel(String ip, int port, String id) {
+    public MulticastChannel(String ip, int port, ArrayList<String> buffer, String id) {
         if (LOG)
             System.out.println("[" + id + "] Creating IP - " + ip + " Port - " + port);
         this.ip = ip;
@@ -22,6 +22,7 @@ public class MulticastChannel extends Thread {
         this.id = id;
 
         initialize_multicast();
+        this.buffer = buffer;
     }
 
     private void initialize_multicast() {
@@ -55,8 +56,7 @@ public class MulticastChannel extends Thread {
         }
         if (LOG)
             System.out.println("[" + id + "] Processing - " + new String(recv.getData()).substring(0, recv.getLength()));
-        MulticastDataProcessing mcdt = new MulticastDataProcessing(new String(recv.getData()).substring(0, recv.getLength()), LOG);
-        mcdt.start();
+        buffer.add(new String(recv.getData()).substring(0, recv.getLength()));
     }
 
     public void run() {
