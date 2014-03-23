@@ -1,5 +1,4 @@
 /*
-
 To backup a chunk, the initiator-peer sends to the MDB multicast data channel a message whose body is the
 contents of that chunk. This message includes also the chunk id and the desired replication degree:
 
@@ -31,7 +30,6 @@ Body . Max Size 64KByte
 
   char to int:
   int value = (int)c.charValue();
-
  */
 
 import java.io.FileNotFoundException;
@@ -40,40 +38,15 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 
 public class BackupReceive extends Thread {
-    static String msg_received;
-    static String[] split_msg;
-    static String msg_returned;
-    final char CR = '\r';
-    final char LF = '\n';
-    char[] version = new char[3];
-    //int replicationDeg;
-    int chunkNo;
+    String[] split_msg;
     MulticastMessageSender mcs;
 
     BackupReceive(MulticastMessageSender mcs, String msg_received) {
-        this.msg_received = msg_received;
+        split_msg = msg_received.split(" ");
         this.mcs = mcs;
     }
 
-    private static void parse_msg() {
-        split_msg = msg_received.split(" ");
-        if(MulticastProcessor.LOG)
-            System.out.println("[BackupReceive] Message Received " + msg_received);
-    }
-
-    public void run() {
-        //Construir a string de armazenamento.
-        parse_msg();
-
-        //Random delay (100ms - 400ms)
-        try {
-            Thread.sleep(100 + (int) (Math.random() * ((400 - 100) + 1)));
-        } catch (InterruptedException e) {
-            System.out.println("Error sleeping.");
-        }
-
-        //Armazenar o chunk
-
+    private void backup_chunk() {
         StringBuilder s = new StringBuilder(split_msg[5].substring(4) + " "); //remove the \r\n\r\n
         for (int i = 6; i < split_msg.length; i++) { //every word past 5 is part of the message so group them together
             s.append(split_msg[i] + " ");
@@ -93,19 +66,25 @@ public class BackupReceive extends Thread {
         } catch (IOException e) {
             System.out.println("Error outputting to file.");
         }
-        msg_returned = answer();
-        send_message(msg_returned);
     }
 
-    private String answer() {
-        String answer = "STORED " + MulticastProcessor.VERSION + " " + split_msg[2] + " " + chunkNo + CR + LF + " " + CR + LF;
+    public void run() {
+        try {
+            Thread.sleep(100 + (int) (Math.random() * ((400 - 100) + 1)));
+        } catch (InterruptedException e) {
+            System.out.println("Error sleeping.");
+        }
+
+        backup_chunk();
+
+        send_message();
+    }
+
+    private void send_message() {
+        String answer = "STORED " + MulticastProcessor.VERSION + " " + split_msg[2] + " " + split_msg[3] + "\r\n\r\n";
         if(MulticastProcessor.LOG)
             System.out.println("[BackupReceive] answer: " + answer);
-        return answer;
-    }
-
-    private void send_message(String answer) {
-        mcs.send_message(msg_returned);
+        mcs.send_message(answer);
         try {
             Thread.sleep(30000);
         } catch (InterruptedException e) {

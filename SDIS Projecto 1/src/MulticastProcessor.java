@@ -27,13 +27,13 @@ public class MulticastProcessor {
     public static final int MULTICAST_RESTORE_PORT_POS = 5;
 
     public static final int MAX_CHUNK_SIZE = 64000;
+    final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
 
     ArrayList<String> buffer;
     ArrayList<String> stored_messages;
+    ArrayList<String> chunk_messages;
+
     float space;
-
-    final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
-
     MulticastMessageSender mcs;
     MulticastMessageSender mcbs;
     MulticastMessageSender mcrs;
@@ -45,15 +45,29 @@ public class MulticastProcessor {
     MulticastProcessor(String multicast_control_ip, int multicast_control_port, String multicast_data_backup_ip, int multicast_data_backup_port, String multicast_data_restore_ip, int multicast_data_restore_port) {
         if (LOG)
             System.out.println("[MulticastProcessor] Initializing.");
+
+        buffer = new ArrayList<String>();
+        stored_messages = new ArrayList<String>();
+        chunk_messages = new ArrayList<String>();
+
         initialize_multicast_channels(multicast_control_ip, multicast_control_port, multicast_data_backup_ip, multicast_data_backup_port, multicast_data_restore_ip, multicast_data_restore_port);
         read_file();
         Interface i = new Interface(buffer);
         i.start();
     }
 
+    public static void main(String[] args) {
+        if (args.length != 6) {
+            System.out.println("Usage: main <multicast_control_ip> <multicast_control_port> <multicast_data_backup_ip> <multicast_data_backup_port> <multicast_data_restore_ip> <multicast_data_restore_port>");
+            System.exit(-1);
+        }
+        //TODO verify arguments;
+
+        MulticastProcessor mdt = new MulticastProcessor(args[MULTICAST_CONTROL_IP_POS], Integer.parseInt(args[MULTICAST_CONTROL_PORT_POS]), args[MULTICAST_BACKUP_IP_POS], Integer.parseInt(args[MULTICAST_BACKUP_PORT_POS]), args[MULTICAST_RESTORE_IP_POS], Integer.parseInt(args[MULTICAST_RESTORE_PORT_POS]));
+        mdt.process_commands();
+    }
+
     private void initialize_multicast_channels(String multicast_control_ip, int multicast_control_port, String multicast_data_backup_ip, int multicast_data_backup_port, String multicast_data_restore_ip, int multicast_data_restore_port) {
-        buffer = new ArrayList<String>();
-        stored_messages = new ArrayList<String>();
         mc = new MulticastChannel(multicast_control_ip, multicast_control_port, buffer, "MulticastControl");
         MulticastSocket mc_socket = mc.getM_socket();
         mc.start();
@@ -73,7 +87,7 @@ public class MulticastProcessor {
         mcr.start();
         mcrs = new MulticastMessageSender(mcr_socket, multicast_data_restore_ip, multicast_data_restore_port);
         if (LOG)
-            System.out.println("[MulticastProcessor] Created Multicast Data Restore");
+            System.out.println("[MulticastProcessor] Created Multicast Data RestoreReceive");
     }
 
     public void read_file() {
@@ -119,7 +133,6 @@ public class MulticastProcessor {
         }
 
 
-
         char[] hexChars = new char[id.length * 2];
         for (int j = 0; j < id.length; j++) {
             int v = id[j] & 0xFF;
@@ -138,18 +151,24 @@ public class MulticastProcessor {
 
         String[] msg = message.split(" ");
 
+        if (msg[1].equals(VERSION)) {
+            System.out.println("Protocol versions do not match. Command aborted.");
+            return -1;
+        }
+
         if (msg[0].equals("PUTCHUNK")) {
             BackupReceive b = new BackupReceive(mcs, message);
             b.start();
             return 0;
         } else if (msg[0].equals("RESTORE")) {
-
+            RestoreReceive rr = new RestoreReceive(mcrs, message, chunk_messages);
+            rr.start();
             return 0;
         } else if (msg[0].equals("STORED")) {
             stored_messages.add(message); //stored messages are handled by the running backupsend processes, this buffer is passed on to them
             return 0;
         } else if (msg[0].equals("CHUNK")) {
-
+            chunk_messages.add(message); //chunk messages are handled by RestoreReceive and RestoreSend
             return 0;
         } else if (msg[0].equals("DELETE")) {
             Delete d = new Delete(msg[1]);
@@ -165,7 +184,7 @@ public class MulticastProcessor {
     private void process_keyboard_command(String cmd) {
         String commands[] = cmd.toLowerCase().split(" ");
         if (commands[0].equals("backup")) {
-            if(commands.length != 3) {
+            if (commands.length != 3) {
                 System.err.println("Invalid command, try again.");
                 return;
             }
@@ -175,13 +194,15 @@ public class MulticastProcessor {
             bs.start();
             return;
         } else if (commands[0].equals("restore")) {
-            if(commands.length != 2) {
+            if (commands.length != 2) {
                 System.err.println("Invalid command, try again.");
                 return;
             }
+            RestoreSend rs = new RestoreSend(mcs, commands[1], file_ids.get(commands[1]), chunk_messages);
+            rs.start();
             return;
         } else if (commands[0].equals("delete")) {
-            if(commands.length != 2) {
+            if (commands.length != 2) {
                 System.err.println("Invalid command, try again.");
                 return;
             }
@@ -189,7 +210,7 @@ public class MulticastProcessor {
             //TODO
             return;
         } else if (commands[0].equals("free")) {
-            if(commands.length != 2) {
+            if (commands.length != 2) {
                 System.err.println("Invalid command, try again.");
                 return;
             }
@@ -200,8 +221,6 @@ public class MulticastProcessor {
     }
 
     public void process_commands() {
-        //mcs.send_message("asd");
-
         while (true) {
             if (!buffer.isEmpty()) {
                 String line = buffer.get(0);
@@ -217,16 +236,5 @@ public class MulticastProcessor {
                 }
             }
         }
-    }
-
-    public static void main(String[] args) {
-        if (args.length != 6) {
-            System.out.println("Usage: main <multicast_control_ip> <multicast_control_port> <multicast_data_backup_ip> <multicast_data_backup_port> <multicast_data_restore_ip> <multicast_data_restore_port>");
-            System.exit(-1);
-        }
-        //TODO verify arguments;
-
-        MulticastProcessor mdt = new MulticastProcessor(args[MULTICAST_CONTROL_IP_POS], Integer.parseInt(args[MULTICAST_CONTROL_PORT_POS]), args[MULTICAST_BACKUP_IP_POS], Integer.parseInt(args[MULTICAST_BACKUP_PORT_POS]), args[MULTICAST_RESTORE_IP_POS], Integer.parseInt(args[MULTICAST_RESTORE_PORT_POS]));
-        mdt.process_commands();
     }
 }

@@ -2,14 +2,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.reflect.Array;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 
 public class BackupSend extends Thread {
     public static final int INITIAL_TIME_TO_WAIT = 500;
-    public static final int MAX_LIMIT_TIME_TO_WAIT = 500*10;
+    public static final int MAX_LIMIT_TIME_TO_WAIT = 500 * 10;
 
     char[] file_id;
     File f;
@@ -21,7 +18,7 @@ public class BackupSend extends Thread {
     MulticastMessageSender mcbs;
 
     BackupSend(MulticastMessageSender mcbs, char[] file_id, File f, int rep_degree, ArrayList<String> store_messages_received) {
-        if(MulticastProcessor.LOG)
+        if (MulticastProcessor.LOG)
             System.out.println("[BackupSend] Initializing");
         this.mcbs = mcbs;
         this.f = f;
@@ -31,14 +28,14 @@ public class BackupSend extends Thread {
     }
 
     private boolean wait_for_replies(long time_to_wait) {
-        long t= System.currentTimeMillis();
-        long end = t+time_to_wait;
+        long t = System.currentTimeMillis();
+        long end = t + time_to_wait;
         int current_index = 0;
-        while(System.currentTimeMillis() < end) {
-            if(store_messages_received.size() > current_index) {
+        while (System.currentTimeMillis() < end) {
+            if (store_messages_received.size() > current_index) {
                 String[] split = store_messages_received.get(current_index).split(" ");
-                if(split[2].equals(new String(file_id))) {
-                    if(MulticastProcessor.LOG)
+                if (split[2].equals(new String(file_id))) {
+                    if (MulticastProcessor.LOG)
                         System.out.println("[BackupSend] Found a STORED message related to this BackupSend instance");
                     current_rep_degree++;
                 }
@@ -58,7 +55,7 @@ public class BackupSend extends Thread {
     private void remove_messages_from_buffer() {
         for (int i = 0; i < store_messages_received.size(); i++) {
             String[] split = store_messages_received.get(i).split(" ");
-            if(split[1].equals(new String(file_id)))
+            if (split[1].equals(new String(file_id)))
                 store_messages_received.remove(i);
         }
     }
@@ -67,29 +64,29 @@ public class BackupSend extends Thread {
         int chunkCount = 0;
         FileInputStream fis = null;
 
-        if(MulticastProcessor.LOG)
-            System.out.println("[BackupSender] Breaking File");
+        if (MulticastProcessor.LOG)
+            System.out.println("[BackupSend] Breaking File");
 
         try {
             fis = new FileInputStream(f.getAbsolutePath());
             byte[] buffer = new byte[MulticastProcessor.MAX_CHUNK_SIZE];
             if (MulticastProcessor.LOG)
-                System.out.println("[BackupSender] Copying file using streams");
+                System.out.println("[BackupSend] Copying file using streams");
             int read = 0;
 
 
             while ((read = fis.read(buffer)) != -1) {
                 if (MulticastProcessor.LOG)
-                    System.out.println("[BackupSender] Creating chunk: " + chunkCount);
+                    System.out.println("[BackupSend] Creating chunk: " + chunkCount);
 
-                mcbs.send_message("PUTCHUNK " + MulticastProcessor.VERSION + " " + new String(file_id) + " " + (chunkCount+1) + " " + rep_degree + " " + "\r\n\r\n" + new String(buffer));
+                mcbs.send_message("PUTCHUNK " + MulticastProcessor.VERSION + " " + new String(file_id) + " " + (chunkCount + 1) + " " + rep_degree + " " + "\r\n\r\n" + new String(buffer));
                 boolean a = false;
                 long time_to_wait = INITIAL_TIME_TO_WAIT;
-                while(!a && time_to_wait <= MAX_LIMIT_TIME_TO_WAIT) {
-                    if(MulticastProcessor.LOG)
-                        System.out.println("[BackupSender] Waiting for answers, time_to_wait - " + time_to_wait);
+                while (!a && time_to_wait <= MAX_LIMIT_TIME_TO_WAIT) {
+                    if (MulticastProcessor.LOG)
+                        System.out.println("[BackupSend] Waiting for answers, time_to_wait - " + time_to_wait);
                     a = wait_for_replies(time_to_wait);
-                    time_to_wait = time_to_wait*2;
+                    time_to_wait = time_to_wait * 2;
                 }
                 remove_messages_from_buffer(); //clears messages that weren't needed (> than rep degree) that belong to this session of backupsend
                 current_rep_degree = 0;
@@ -108,18 +105,6 @@ public class BackupSend extends Thread {
                 System.out.println("Error while closing stream: " + ioe);
             }
         }
-    }
-
-    private byte[] hash_file_id(byte[] file_id) {
-        MessageDigest digest;
-        try {
-            digest = MessageDigest.getInstance("SHA-256");
-            return digest.digest(file_id);
-        } catch (NoSuchAlgorithmException e) {
-            System.out.println("Error while converting to SHA-256");
-            e.printStackTrace();
-        }
-        return null;
     }
 
     public void run() {
