@@ -2,6 +2,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 public class MulticastChannel extends Thread {
@@ -54,7 +55,20 @@ public class MulticastChannel extends Thread {
         }
         if (MulticastProcessor.LOG)
             System.out.println("[" + id + "] Processing - " + new String(recv.getData()).substring(0, recv.getLength()));
-        buffer.add(new String(recv.getData()).substring(0, recv.getLength()));
+        if(!MulticastProcessor.ACCEPT_SAME_MACHINE_PACKETS)  {
+            try {
+                if(!recv.getAddress().getHostAddress().equals(InetAddress.getLocalHost().getHostAddress()))  {
+                    buffer.add(new String(recv.getData()).substring(0, recv.getLength()));
+                } else {
+                    if(MulticastProcessor.LOG)
+                        System.out.println("[MulticastChannel] Rejecting packet because it was sent from the same machine");
+                }
+            } catch (UnknownHostException e) {
+                System.err.println("Can't find own ip, accepting all packets.");
+                buffer.add(new String(recv.getData()).substring(0, recv.getLength()));
+            }
+        } else
+            buffer.add(new String(recv.getData()).substring(0, recv.getLength()));
     }
 
     public void run() {

@@ -12,7 +12,7 @@ public class Interface extends Thread {
     }
 
     private void keyboard() {
-        System.out.println("Welcome to the Distributed File BackupReceive System\n");
+        System.out.println("Welcome to the Distributed File System\n");
         System.out.println("Possible Commands:\nbackup <file_name> <number_of_copies>\nrestore <file_name>\ndelete file_name\nfree <n_bytes_to_free>");
         Scanner s = new Scanner(System.in);
         while (true) {

@@ -38,6 +38,7 @@ public class BackupSend extends Thread {
                     if (MulticastProcessor.LOG)
                         System.out.println("[BackupSend] Found a STORED message related to this BackupSend instance");
                     current_rep_degree++;
+                    store_messages_received.remove(current_index);
                 }
                 current_index++;
             } else {
@@ -97,6 +98,7 @@ public class BackupSend extends Thread {
         } catch (IOException ioe) {
             System.out.println("Exception while copying file " + ioe);
         } finally {
+            System.out.println("Backup Finished");
             try {
                 if (fis != null) {
                     fis.close();

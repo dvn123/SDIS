@@ -17,6 +17,7 @@ import java.util.regex.Pattern;
 
 public class MulticastProcessor {
     public static final boolean LOG = true;
+    public static final boolean ACCEPT_SAME_MACHINE_PACKETS = true;
     public static final String VERSION = "0.5";
 
     public static final int MULTICAST_CONTROL_IP_POS = 0;
@@ -34,6 +35,7 @@ public class MulticastProcessor {
     ArrayList<String> chunk_messages;
 
     float space;
+    float remaining_space;
     MulticastMessageSender mcs;
     MulticastMessageSender mcbs;
     MulticastMessageSender mcrs;
@@ -102,6 +104,7 @@ public class MulticastProcessor {
                 Matcher m = p.matcher(line);
                 if (m.find()) {
                     space = Float.parseFloat(m.group(1));
+                    remaining_space = space;
                     if (LOG)
                         System.out.println("[MulticastProcessor] Space - " + space);
                 }
@@ -113,7 +116,6 @@ public class MulticastProcessor {
 
     private char[] create_file_id(File file) {
         Path p = Paths.get(file.getAbsolutePath());
-        System.out.println(p);
         BasicFileAttributes view = null;
         try {
             view = Files.getFileAttributeView(p, BasicFileAttributeView.class).readAttributes();
@@ -151,14 +153,17 @@ public class MulticastProcessor {
 
         String[] msg = message.split(" ");
 
-        if (msg[1].equals(VERSION)) {
+        if (!msg[1].equals(VERSION)) {
             System.out.println("Protocol versions do not match. Command aborted.");
             return -1;
         }
 
         if (msg[0].equals("PUTCHUNK")) {
-            BackupReceive b = new BackupReceive(mcs, message);
-            b.start();
+            if(remaining_space > 0) {
+                BackupReceive b = new BackupReceive(mcs, message, remaining_space);
+                remaining_space -= b.getLength();
+                b.start();
+            }
             return 0;
         } else if (msg[0].equals("RESTORE")) {
             RestoreReceive rr = new RestoreReceive(mcrs, message, chunk_messages);
