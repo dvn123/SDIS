@@ -77,10 +77,11 @@ public class BackupSend extends Thread {
 
 
             while ((read = fis.read(buffer)) != -1) {
+                String message = "PUTCHUNK " + MulticastProcessor.VERSION + " " + new String(file_id) + " " + (chunkCount) + " " + rep_degree + " " + "\r\n\r\n" + new String(buffer).substring(0,read);
                 if (MulticastProcessor.LOG)
-                    System.out.println("[BackupSend] Creating chunk: " + chunkCount);
+                    System.out.println("[BackupSend] Message Length - " + message.length() + " Read - " + read + " Reading file - " + message);
 
-                mcbs.send_message("PUTCHUNK " + MulticastProcessor.VERSION + " " + new String(file_id) + " " + (chunkCount + 1) + " " + rep_degree + " " + "\r\n\r\n" + new String(buffer));
+                mcbs.send_message(message);
                 boolean a = false;
                 long time_to_wait = INITIAL_TIME_TO_WAIT;
                 while (!a && time_to_wait <= MAX_LIMIT_TIME_TO_WAIT) {

@@ -48,7 +48,7 @@ public class MulticastMessageSender extends Thread {
         try {
             m_socket.send(p);
         } catch (IOException e) {
-            System.err.println("Failed to send message.");
+            System.err.println("Failed to send message. " + e);
         }
     }
 

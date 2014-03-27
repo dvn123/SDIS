@@ -1,5 +1,6 @@
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.net.MulticastSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -64,7 +65,6 @@ public class MulticastProcessor {
             System.exit(-1);
         }
         //TODO verify arguments;
-
         MulticastProcessor mdt = new MulticastProcessor(args[MULTICAST_CONTROL_IP_POS], Integer.parseInt(args[MULTICAST_CONTROL_PORT_POS]), args[MULTICAST_BACKUP_IP_POS], Integer.parseInt(args[MULTICAST_BACKUP_PORT_POS]), args[MULTICAST_RESTORE_IP_POS], Integer.parseInt(args[MULTICAST_RESTORE_PORT_POS]));
         mdt.process_commands();
     }
@@ -76,7 +76,6 @@ public class MulticastProcessor {
         mcs = new MulticastMessageSender(mc_socket, multicast_control_ip, multicast_control_port);
         if (LOG)
             System.out.println("[MulticastProcessor] Created Multicast Control");
-
         mcb = new MulticastChannel(multicast_data_backup_ip, multicast_data_backup_port, buffer, "MulticastDataBackup");
         MulticastSocket mcb_socket = mcb.getM_socket();
         mcb.start();
@@ -113,6 +112,33 @@ public class MulticastProcessor {
             System.out.println("Configuration file not found. Using default space of 128MB");
         }
     }
+
+    public void read_chunks_id() {
+        final File file = new File("id_chunks");
+
+        final Scanner scanner;
+        try {
+            scanner = new Scanner(file);
+            Pattern p = Pattern.compile("SPACE: (.*)");
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine();
+                Matcher m = p.matcher(line);
+                if (m.find()) {
+                    space = Float.parseFloat(m.group(1));
+                    remaining_space = space;
+                    if (LOG)
+                        System.out.println("[MulticastProcessor] Space - " + space);
+                }
+            }
+        } catch (FileNotFoundException e) {
+            System.out.println("Configuration file not found. Using default space of 128MB");
+        }
+    }
+
+    /*void write_chunks_map(String key, String ) {
+        FileOutputStream fos = new FileOutputStream("id_chunks");
+        fos.write
+    }  */
 
     private char[] create_file_id(File file) {
         Path p = Paths.get(file.getAbsolutePath());
@@ -165,7 +191,7 @@ public class MulticastProcessor {
                 b.start();
             }
             return 0;
-        } else if (msg[0].equals("RESTORE")) {
+        } else if (msg[0].equals("GETCHUNK")) {
             RestoreReceive rr = new RestoreReceive(mcrs, message, chunk_messages);
             rr.start();
             return 0;

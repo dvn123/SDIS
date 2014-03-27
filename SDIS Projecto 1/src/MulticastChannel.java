@@ -10,7 +10,7 @@ public class MulticastChannel extends Thread {
     private String id;
     private int port;
     private MulticastSocket m_socket;
-    private int MAX_BUFFER_SIZE = 1024;
+    private int MAX_BUFFER_SIZE = 64000;
     private ArrayList<String> buffer;
 
     public MulticastChannel(String ip, int port, ArrayList<String> buffer, String id) {

@@ -20,8 +20,10 @@ public class BackupReceive extends Thread {
         }
         not_enough_space = false;
         dataToWrite = String.valueOf(s).getBytes();
-        if(dataToWrite.length > remaining_space)
+        if(dataToWrite.length > remaining_space)  {
             not_enough_space = true;
+            System.err.println("[BackupReceive] Not enough space to backup");
+        }
     }
 
     public float getLength() {

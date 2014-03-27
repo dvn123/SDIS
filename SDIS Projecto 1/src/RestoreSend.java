@@ -30,9 +30,13 @@ public class RestoreSend extends Thread {
         long end = t + time_to_wait;
         int current_index = 0;
         while (System.currentTimeMillis() < end) {
+            //System.out.println(" SIZE - " + chunk_messages_received.size() + " - CurrentIndex - " + current_index);
             if (chunk_messages_received.size() > current_index) {
-                String[] split = chunk_messages_received.get(current_index).split(" ");
-                if (split[2].equals(new String(file_id)) && split[3].equals(String.valueOf(current_chunk_n))) {
+                String[] split = chunk_messages_received.get(current_index).split("\\s+");
+                //System.out.println(split[2].equals(new String(file_id)));
+                //System.out.println("split[3] - " + split[3] + " current_chunk " + (char) current_chunk_n);
+                //System.out.println(Integer.parseInt(split[3]) == (current_chunk_n));
+                if (split[2].equals(new String(file_id)) && Integer.parseInt(split[3]) == (current_chunk_n)) {
                     if (MulticastProcessor.LOG)
                         System.out.println("[BackupSend] Found a CHUNK message related to this RestoreSend instance");
                     try {
@@ -78,7 +82,15 @@ public class RestoreSend extends Thread {
                 if (MulticastProcessor.LOG)
                     System.out.println("[RestoreSend] Creating chunk: " + current_chunk_n);
                 mcs.send_message("GETCHUNK " + MulticastProcessor.VERSION + " " + new String(file_id) + " " + current_chunk_n + " " + "\r\n\r\n");
-                int size = wait_for_replies(INITIAL_TIME_TO_WAIT);
+
+                float size = -1;
+                long time_to_wait = INITIAL_TIME_TO_WAIT;
+                while (size == -1 && time_to_wait <= MAX_LIMIT_TIME_TO_WAIT) {
+                    if (MulticastProcessor.LOG)
+                        System.out.println("[RestoreSend] Waiting for answers, time_to_wait - " + time_to_wait);
+                    size = wait_for_replies(time_to_wait);
+                    time_to_wait = time_to_wait * 2;
+                }     //TODO meter como putchunk
                 remove_messages_from_buffer(); //clears messages that weren't needed (> than rep degree) that belong to this session of backupsend
                 if (size < MulticastProcessor.MAX_CHUNK_SIZE) //if size isn't max this is the last chunk
                     break;
@@ -91,6 +103,7 @@ public class RestoreSend extends Thread {
                 if (fos != null) {
                     fos.close();
                 }
+                System.out.println("Restore Finished");
             } catch (IOException ioe) {
                 System.out.println("Error while closing stream: " + ioe);
             }

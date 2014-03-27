@@ -66,7 +66,7 @@ public class RestoreReceive extends Thread {
     }
 
     private void send_message() {
-        String answer = "CHUNK  " + MulticastProcessor.VERSION + " " + split_msg[2] + " " + split_msg[3] + "\r\n\r\n" + new String(data);
+        String answer = "CHUNK " + MulticastProcessor.VERSION + " " + split_msg[2] + " " + split_msg[3] + "\r\n\r\n" + new String(data);
         if (MulticastProcessor.LOG)
             System.out.println("[RestoreReceive] answer: " + answer);
         mcrs.send_message(answer);
