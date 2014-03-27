@@ -36,6 +36,7 @@ public class MulticastProcessor {
 
     float space;
     float remaining_space;
+    public static String homeDir;
     MulticastMessageSender mcs;
     MulticastMessageSender mcbs;
     MulticastMessageSender mcrs;
@@ -98,15 +99,22 @@ public class MulticastProcessor {
         final Scanner scanner;
         try {
             scanner = new Scanner(file);
-            Pattern p = Pattern.compile("SPACE: (.*)");
+            Pattern p1 = Pattern.compile("SPACE: (.*)");
+            Pattern p2 = Pattern.compile("PATH: (.*)");
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
-                Matcher m = p.matcher(line);
-                if (m.find()) {
-                    space = Float.parseFloat(m.group(1));
+                Matcher m1 = p1.matcher(line);
+                Matcher m2 = p2.matcher(line);
+                if (m1.find()) {
+                    space = Float.parseFloat(m1.group(1));
                     remaining_space = space;
                     if (LOG)
                         System.out.println("[MulticastProcessor] Space - " + space);
+                }
+                if (m2.find()) {
+                    homeDir = m2.group(1);
+                    if (LOG)
+                        System.out.println("[MulticasProcessor] HomeDir - " + homeDir);
                 }
             }
         } catch (FileNotFoundException e) {
@@ -180,7 +188,9 @@ public class MulticastProcessor {
             space -= d.delete_files();
             return 0;
         } else if (msg[0].equals("REMOVE")) {
-
+            Remove r = new Remove();
+            space -= r.freeSpace(10000);
+            //Return Msg Protocol Thingy
             return 0;
         }
         return -1;
