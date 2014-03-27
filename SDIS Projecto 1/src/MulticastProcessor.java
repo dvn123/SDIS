@@ -27,6 +27,8 @@ public class MulticastProcessor {
     public static final int MULTICAST_BACKUP_PORT_POS = 3;
     public static final int MULTICAST_RESTORE_IP_POS = 4;
     public static final int MULTICAST_RESTORE_PORT_POS = 5;
+    public static final int SPACE_POS = 6;
+    public static final int PATH_POS = 7;
 
     public static final int MAX_CHUNK_SIZE = 64000;
     final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
@@ -36,7 +38,7 @@ public class MulticastProcessor {
     ArrayList<String> chunk_messages;
 
     float space;
-    float remaining_space;
+    String path;
     public static String homeDir;
     MulticastMessageSender mcs;
     MulticastMessageSender mcbs;
@@ -46,27 +48,30 @@ public class MulticastProcessor {
     private MulticastChannel mcb;
     private MulticastChannel mcr;
 
-    MulticastProcessor(String multicast_control_ip, int multicast_control_port, String multicast_data_backup_ip, int multicast_data_backup_port, String multicast_data_restore_ip, int multicast_data_restore_port) {
+    MulticastProcessor(String multicast_control_ip, int multicast_control_port, String multicast_data_backup_ip, int multicast_data_backup_port, String multicast_data_restore_ip, int multicast_data_restore_port, int space, String path) {
         if (LOG)
             System.out.println("[MulticastProcessor] Initializing.");
 
         buffer = new ArrayList<String>();
         stored_messages = new ArrayList<String>();
         chunk_messages = new ArrayList<String>();
+        this.space = space;
+        this.path = path;
 
         initialize_multicast_channels(multicast_control_ip, multicast_control_port, multicast_data_backup_ip, multicast_data_backup_port, multicast_data_restore_ip, multicast_data_restore_port);
-        read_file();
+        //read_file();
         Interface i = new Interface(buffer);
         i.start();
     }
 
     public static void main(String[] args) {
-        if (args.length != 6) {
-            System.out.println("Usage: main <multicast_control_ip> <multicast_control_port> <multicast_data_backup_ip> <multicast_data_backup_port> <multicast_data_restore_ip> <multicast_data_restore_port>");
+        if (args.length != 8) {
+            System.out.println("Usage: main <multicast_control_ip> <multicast_control_port> <multicast_data_backup_ip> <multicast_data_backup_port> <multicast_data_restore_ip> <multicast_data_restore_port> <space> <backup_path>");
             System.exit(-1);
         }
         //TODO verify arguments;
-        MulticastProcessor mdt = new MulticastProcessor(args[MULTICAST_CONTROL_IP_POS], Integer.parseInt(args[MULTICAST_CONTROL_PORT_POS]), args[MULTICAST_BACKUP_IP_POS], Integer.parseInt(args[MULTICAST_BACKUP_PORT_POS]), args[MULTICAST_RESTORE_IP_POS], Integer.parseInt(args[MULTICAST_RESTORE_PORT_POS]));
+        //TODO path to save files
+        MulticastProcessor mdt = new MulticastProcessor(args[MULTICAST_CONTROL_IP_POS], Integer.parseInt(args[MULTICAST_CONTROL_PORT_POS]), args[MULTICAST_BACKUP_IP_POS], Integer.parseInt(args[MULTICAST_BACKUP_PORT_POS]), args[MULTICAST_RESTORE_IP_POS], Integer.parseInt(args[MULTICAST_RESTORE_PORT_POS]), Integer.parseInt(args[SPACE_POS]), args[PATH_POS]);
         mdt.process_commands();
     }
 
@@ -91,7 +96,7 @@ public class MulticastProcessor {
         if (LOG)
             System.out.println("[MulticastProcessor] Created Multicast Data RestoreReceive");
     }
-
+    /*
     public void read_file() {
         final File file = new File("conf");
 
@@ -154,7 +159,8 @@ public class MulticastProcessor {
         try {
             view = Files.getFileAttributeView(p, BasicFileAttributeView.class).readAttributes();
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("No such file");
+            return null;
         }
         FileTime fileTime = view.lastAccessTime();
         byte[] id = (file.getAbsolutePath() + fileTime.toString()).getBytes();
@@ -193,14 +199,14 @@ public class MulticastProcessor {
         }
 
         if (msg[0].equals("PUTCHUNK")) {
-            if(remaining_space > 0) {
-                BackupReceive b = new BackupReceive(mcs, message, remaining_space);
-                remaining_space -= b.getLength();
+            if(space > 0) {
+                BackupReceive b = new BackupReceive(mcs, message, space, path);
+                space -= b.getLength();
                 b.start();
             }
             return 0;
         } else if (msg[0].equals("GETCHUNK")) {
-            RestoreReceive rr = new RestoreReceive(mcrs, message, chunk_messages);
+            RestoreReceive rr = new RestoreReceive(mcrs, message, chunk_messages, path);
             rr.start();
             return 0;
         } else if (msg[0].equals("STORED")) {
@@ -231,16 +237,22 @@ public class MulticastProcessor {
             }
             File f = new File(commands[1]);
             char[] id = create_file_id(f);
-            BackupSend bs = new BackupSend(mcbs, id, f, Integer.parseInt(commands[2]), stored_messages);
-            bs.start();
+            if(id != null) {
+                BackupSend bs = new BackupSend(mcbs, id, f, Integer.parseInt(commands[2]), stored_messages);
+                bs.start();
+            }
             return;
         } else if (commands[0].equals("restore")) {
             if (commands.length != 2) {
                 System.err.println("Invalid command, try again.");
                 return;
             }
-            RestoreSend rs = new RestoreSend(mcs, commands[1], file_ids.get(commands[1]), chunk_messages);
-            rs.start();
+            if(file_ids.get(commands[1]) != null) {
+                RestoreSend rs = new RestoreSend(mcs, commands[1], file_ids.get(commands[1]), chunk_messages);
+                rs.start();
+            } else {
+                System.err.println("File wasn't stored in this system. Unable to restore.");
+            }
             return;
         } else if (commands[0].equals("delete")) {
             if (commands.length != 2) {

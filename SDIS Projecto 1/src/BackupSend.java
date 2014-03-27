@@ -77,7 +77,9 @@ public class BackupSend extends Thread {
 
 
             while ((read = fis.read(buffer)) != -1) {
-                String message = "PUTCHUNK " + MulticastProcessor.VERSION + " " + new String(file_id) + " " + (chunkCount) + " " + rep_degree + " " + "\r\n\r\n" + new String(buffer).substring(0,read);
+                if(MulticastProcessor.LOG)
+                    System.out.println("[BackupSend] Length of buffer - " + buffer.length + " - N of bytes read - " + read + " String buffer length - " + new String(buffer, "UTF-8").length());
+                String message = "PUTCHUNK " + MulticastProcessor.VERSION + " " + new String(file_id) + " " + (chunkCount) + " " + rep_degree + " " + "\r\n\r\n" + new String(buffer, "UTF-8").substring(0,read);
                 if (MulticastProcessor.LOG)
                     System.out.println("[BackupSend] Message Length - " + message.length() + " Read - " + read + " Reading file - " + message);
 

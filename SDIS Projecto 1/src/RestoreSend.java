@@ -43,6 +43,8 @@ public class RestoreSend extends Thread {
                         String data_to_write = chunk_messages_received.get(current_index).substring(chunk_messages_received.get(current_index).indexOf("\r\n\r\n") + 4);
                         System.out.println("Writing - " + data_to_write);
                         fos.write(data_to_write.getBytes()); //get message after "\r\n\r\n"
+                        chunk_messages_received.remove(current_index);
+                        current_index--;
                         return data_to_write.length();
                     } catch (IOException e) {
                         System.err.println("Error writing to file.");
@@ -91,10 +93,14 @@ public class RestoreSend extends Thread {
                         System.out.println("[RestoreSend] Waiting for answers, time_to_wait - " + time_to_wait);
                     size = wait_for_replies(time_to_wait);
                     time_to_wait = time_to_wait * 2;
-                }     //TODO meter como putchunk
+                }
                 remove_messages_from_buffer(); //clears messages that weren't needed (> than rep degree) that belong to this session of backupsend
-                if (size < MulticastProcessor.MAX_CHUNK_SIZE) //if size isn't max this is the last chunk
+                if (size < MulticastProcessor.MAX_CHUNK_SIZE && size != -1) {
+                    //if size isn't max this is the last chunk
+                    System.out.println("[RestoreSend] Found last chunk - SIZE - " + size);
                     break;
+                }
+
                 current_chunk_n++;
             }
         } catch (FileNotFoundException e) {

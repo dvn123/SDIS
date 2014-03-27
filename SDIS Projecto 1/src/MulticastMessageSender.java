@@ -4,9 +4,7 @@ import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.UnknownHostException;
 
-public class MulticastMessageSender extends Thread {
-    private String message;
-    DatagramPacket p;
+public class MulticastMessageSender {
     private MulticastSocket m_socket;
     String ip;
     int port;
@@ -23,26 +21,28 @@ public class MulticastMessageSender extends Thread {
             System.out.println("[MulticastMessageSender] Creating");
     }
 
-    private void create_datagram() {
+    private DatagramPacket create_datagram(String message) {
         try {
             InetAddress addr = InetAddress.getByName(ip);
-            p = new DatagramPacket(message.getBytes(), message.getBytes().length, addr, port);
+            return new DatagramPacket(message.getBytes(), message.getBytes().length, addr, port);
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
-
+        return null;
     }
 
-    private void send_message() throws IOException {
-        create_datagram();
-        if(MulticastProcessor.LOG)
-            System.out.println("[MulticastMessageSender] Sending Message");
-        m_socket.send(p);
+    private DatagramPacket create_datagram(byte[] message) {
+        try {
+            InetAddress addr = InetAddress.getByName(ip);
+            return new DatagramPacket(message, message.length, addr, port);
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public void send_message(String message)  {
-        this.message = message;
-        create_datagram();
+        DatagramPacket p = create_datagram(message);
         if(MulticastProcessor.LOG)
             System.out.println("[MulticastMessageSender] Sending Message");
         try {
@@ -52,12 +52,14 @@ public class MulticastMessageSender extends Thread {
         }
     }
 
-    public void run() {
+    public void send_message(byte[] message)  {
+        DatagramPacket p = create_datagram(message);
+        if(MulticastProcessor.LOG)
+            System.out.println("[MulticastMessageSender] Sending Message");
         try {
-            send_message();
+            m_socket.send(p);
         } catch (IOException e) {
-            System.err.println("Failed to send message.");
+            System.err.println("Failed to send message. " + e);
         }
     }
-
 }

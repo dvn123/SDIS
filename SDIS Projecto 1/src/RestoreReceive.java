@@ -42,18 +42,20 @@ public class RestoreReceive extends Thread {
     String[] split_msg;
     MulticastMessageSender mcrs;
     byte[] data;
+    String path;
 
     ArrayList<String> chunk_messages_received;
 
-    RestoreReceive(MulticastMessageSender mcrs, String msg_received, ArrayList<String> chunk_messages_received) {
+    RestoreReceive(MulticastMessageSender mcrs, String msg_received, ArrayList<String> chunk_messages_received, String path) {
         split_msg = msg_received.split(" ");
         this.mcrs = mcrs;
+        this.path = path;
         this.chunk_messages_received = chunk_messages_received;
     }
 
     private void read_file() {
         try {
-            File file = new File(split_msg[2] + "-" + split_msg[3]);
+            File file = new File(path + "/" + split_msg[2] + "-" + split_msg[3]);
             FileInputStream fis = new FileInputStream(file);
             data = new byte[(int) file.length()];
             fis.read(data);

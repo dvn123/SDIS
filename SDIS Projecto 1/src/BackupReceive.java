@@ -1,19 +1,18 @@
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 
 public class BackupReceive extends Thread {
     String[] split_msg;
     MulticastMessageSender mcs;
     byte[] dataToWrite;
     boolean not_enough_space;
+    String path;
 
-    BackupReceive(MulticastMessageSender mcs, String msg_received, float remaining_space) {
+    BackupReceive(MulticastMessageSender mcs, String msg_received, float remaining_space, String path) {
         if(MulticastProcessor.LOG)
             System.out.println("[BackupReceive] Initializing");
         split_msg = msg_received.split(" ");
         this.mcs = mcs;
+        this.path = path;
         StringBuilder s = new StringBuilder(split_msg[5].substring(4) + " "); //remove the \r\n\r\n
         for (int i = 6; i < split_msg.length; i++) { //every word past 5 is part of the message so group them together
             s.append(split_msg[i] + " ");
@@ -34,8 +33,13 @@ public class BackupReceive extends Thread {
 
     private void backup_chunk() {
         FileOutputStream out = null;
+        File f = new File(path);
+        if(!f.mkdirs()) {
+            System.err.println("Invalid path");
+            return;
+        }
         try {
-            out = new FileOutputStream(split_msg[2] + "-" + split_msg[3]);
+            out = new FileOutputStream(path + "/" + split_msg[2] + "-" + split_msg[3]);
         } catch (FileNotFoundException ioe) {
             System.out.println("Error while creating file " + ioe);
         }
