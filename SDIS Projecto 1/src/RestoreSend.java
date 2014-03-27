@@ -40,7 +40,8 @@ public class RestoreSend extends Thread {
                     if (MulticastProcessor.LOG)
                         System.out.println("[BackupSend] Found a CHUNK message related to this RestoreSend instance");
                     try {
-                        String data_to_write = chunk_messages_received.get(current_index).substring(chunk_messages_received.get(current_index).indexOf("\r\n\r\n"));
+                        String data_to_write = chunk_messages_received.get(current_index).substring(chunk_messages_received.get(current_index).indexOf("\r\n\r\n") + 4);
+                        System.out.println("Writing - " + data_to_write);
                         fos.write(data_to_write.getBytes()); //get message after "\r\n\r\n"
                         return data_to_write.length();
                     } catch (IOException e) {
