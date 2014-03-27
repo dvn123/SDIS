@@ -1,32 +1,33 @@
 import java.io.File;
-import java.io.FilenameFilter;
 
 public class Delete {
-    String file_id;
-    File[] paths;
+    final String fileId;
 
-    Delete(String file_id) {
-        this.file_id = file_id;
+    /* DELETE <FileId> <CRLF> <CRLF> */
+
+    Delete(String fileIdd) {
+        this.fileId = fileIdd;
     }
 
-    private void find_files() {
-        FilenameFilter fileNameFilter = new FilenameFilter() {
+    public long delete_files() {
+        File dir = new File(MulticastProcessor.homeDir);
+        File[] dirFiles = dir.listFiles();
+        int chunksDeleted = 0;
+        long deletedSize = 0;
 
-            @Override
-            public boolean accept(File dir, String name) {
-                return name.matches("file_id");
+        for (File file : dirFiles) {
+
+            String fileName = file.getName();
+
+            if(fileName.startsWith(fileId))
+            {
+                deletedSize += file.length();
+                file.delete();
+                chunksDeleted++;
             }
-        };
-
-        File dir = new File("./data");
-        paths = dir.listFiles(fileNameFilter);
-    }
-
-    public int delete_files() {
-        find_files();
-        for (int i = 0; i < paths.length; i++) {
-            paths[i].delete();
         }
-        return 64000*paths.length;
+
+        return deletedSize;
     }
+
 }
