@@ -43,10 +43,11 @@ public class RestoreReceive extends Thread {
     MulticastMessageSender mcrs;
     byte[] data;
     String path;
+    int read;
 
-    ArrayList<String> chunk_messages_received;
+    ArrayList<byte[]> chunk_messages_received;
 
-    RestoreReceive(MulticastMessageSender mcrs, String msg_received, ArrayList<String> chunk_messages_received, String path) {
+    RestoreReceive(MulticastMessageSender mcrs, String msg_received, ArrayList<byte[]> chunk_messages_received, String path) {
         split_msg = msg_received.split(" ");
         this.mcrs = mcrs;
         this.path = path;
@@ -58,7 +59,7 @@ public class RestoreReceive extends Thread {
             File file = new File(path + "/" + split_msg[2] + "-" + split_msg[3]);
             FileInputStream fis = new FileInputStream(file);
             data = new byte[(int) file.length()];
-            fis.read(data);
+            read = fis.read(data);
             fis.close();
         } catch (FileNotFoundException e) {
             System.exit(0); //if the chunk wasn't backed up on this pc
@@ -68,10 +69,15 @@ public class RestoreReceive extends Thread {
     }
 
     private void send_message() {
-        String answer = "CHUNK " + MulticastProcessor.VERSION + " " + split_msg[2] + " " + split_msg[3] + "\r\n\r\n" + new String(data);
+        String answer = "CHUNK " + MulticastProcessor.VERSION + " " + split_msg[2] + " " + split_msg[3] + "\r\n\r\n";
+        byte[] one = ("CHUNK " + MulticastProcessor.VERSION + " " + split_msg[2] + " " + split_msg[3] + "\r\n\r\n").getBytes();
+        byte[] combined = new byte[one.length + read];
+
+        System.arraycopy(one,0,combined,0,one.length);
+        System.arraycopy(data,0,combined,one.length,read);
         if (MulticastProcessor.LOG)
             System.out.println("[RestoreReceive] answer: " + answer);
-        mcrs.send_message(answer);
+        mcrs.send_message(combined);
         try {
             Thread.sleep(30000);
         } catch (InterruptedException e) {
@@ -81,7 +87,8 @@ public class RestoreReceive extends Thread {
 
     private int check_chunk_count() {
         for (int i = 0; i < chunk_messages_received.size(); i++) {
-            String[] split = chunk_messages_received.get(i).split(" ");
+            String message_1 = new String(chunk_messages_received.get(i)).substring(0, new String(chunk_messages_received.get(i)).lastIndexOf("\r\n\r\n"));
+            String[] split = message_1.split(" ");
             if (split[2].equals(split_msg[2]) && split[3].equals(split_msg[3])) {
                 return -1;
             }

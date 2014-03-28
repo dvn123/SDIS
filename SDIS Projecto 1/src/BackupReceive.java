@@ -1,24 +1,34 @@
 import java.io.*;
+import java.util.Arrays;
 
 public class BackupReceive extends Thread {
     String[] split_msg;
     MulticastMessageSender mcs;
     byte[] dataToWrite;
+    String test;
     boolean not_enough_space;
     String path;
 
-    BackupReceive(MulticastMessageSender mcs, String msg_received, float remaining_space, String path) {
+    BackupReceive(MulticastMessageSender mcs, byte[] msg_received, float remaining_space, String path) {
         if(MulticastProcessor.LOG)
             System.out.println("[BackupReceive] Initializing");
-        split_msg = msg_received.split(" ");
+
         this.mcs = mcs;
         this.path = path;
-        StringBuilder s = new StringBuilder(split_msg[5].substring(4) + " "); //remove the \r\n\r\n
+
+        String message_1 = new String(msg_received).substring(0, new String(msg_received).lastIndexOf("\r\n\r\n"));
+        System.out.println("[BackupReceive] Message 1 - " + message_1);
+        split_msg = message_1.split(" ");
+
+        /*StringBuilder s = new StringBuilder(split_msg[5].substring(4) + " "); //remove the \r\n\r\n
         for (int i = 6; i < split_msg.length; i++) { //every word past 5 is part of the message so group them together
             s.append(split_msg[i] + " ");
-        }
+        }*/
         not_enough_space = false;
-        dataToWrite = String.valueOf(s).getBytes();
+        dataToWrite = Arrays.copyOfRange(msg_received, message_1.length() + 4, msg_received.length);
+        test = new String(dataToWrite);
+        if(MulticastProcessor.LOG)
+           System.out.println("[BackupReceive] !!! dataToWrite - " + test);
         if(dataToWrite.length > remaining_space)  {
             not_enough_space = true;
             System.err.println("[BackupReceive] Not enough space to backup");
@@ -32,19 +42,13 @@ public class BackupReceive extends Thread {
     }
 
     private void backup_chunk() {
-        FileOutputStream out = null;
         File f = new File(path);
-        if(!f.mkdirs()) {
-            System.err.println("Invalid path");
-            return;
-        }
+        f.mkdirs();
         try {
-            out = new FileOutputStream(path + "/" + split_msg[2] + "-" + split_msg[3]);
-        } catch (FileNotFoundException ioe) {
-            System.out.println("Error while creating file " + ioe);
-        }
-        try {
+            FileOutputStream out = new FileOutputStream(path + "/" + split_msg[2] + "-" + split_msg[3]);
+            System.out.println("WRITING - " + test.trim() + " - a " + test.trim().length());
             out.write(dataToWrite);
+            out.flush();
             out.close();
         } catch (IOException e) {
             System.out.println("Error outputting to file.");

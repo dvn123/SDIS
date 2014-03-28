@@ -2,6 +2,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class RestoreSend extends Thread {
     public static final int INITIAL_TIME_TO_WAIT = 500;
@@ -11,11 +12,11 @@ public class RestoreSend extends Thread {
 
     String file_name;
     char[] file_id;
-    ArrayList<String> chunk_messages_received;
+    ArrayList<byte[]> chunk_messages_received;
     FileOutputStream fos;
     int current_chunk_n;
 
-    RestoreSend(MulticastMessageSender mcs, String file_name, char[] file_id, ArrayList<String> chunk_messages_received) {
+    RestoreSend(MulticastMessageSender mcs, String file_name, char[] file_id, ArrayList<byte[]> chunk_messages_received) {
         if (MulticastProcessor.LOG)
             System.out.println("[RestoreSend] Initializing");
         this.mcs = mcs;
@@ -32,7 +33,8 @@ public class RestoreSend extends Thread {
         while (System.currentTimeMillis() < end) {
             //System.out.println(" SIZE - " + chunk_messages_received.size() + " - CurrentIndex - " + current_index);
             if (chunk_messages_received.size() > current_index) {
-                String[] split = chunk_messages_received.get(current_index).split("\\s+");
+                String message_1 = new String(chunk_messages_received.get(current_index)).substring(0, new String(chunk_messages_received.get(current_index)).lastIndexOf("\r\n\r\n"));
+                String[] split = message_1.split("\\s+");
                 //System.out.println(split[2].equals(new String(file_id)));
                 //System.out.println("split[3] - " + split[3] + " current_chunk " + (char) current_chunk_n);
                 //System.out.println(Integer.parseInt(split[3]) == (current_chunk_n));
@@ -40,16 +42,15 @@ public class RestoreSend extends Thread {
                     if (MulticastProcessor.LOG)
                         System.out.println("[BackupSend] Found a CHUNK message related to this RestoreSend instance");
                     try {
-                        String data_to_write = chunk_messages_received.get(current_index).substring(chunk_messages_received.get(current_index).indexOf("\r\n\r\n") + 4);
-                        System.out.println("Writing - " + data_to_write);
-                        fos.write(data_to_write.getBytes()); //get message after "\r\n\r\n"
+                        byte[] dataToWrite = Arrays.copyOfRange(chunk_messages_received.get(current_index), message_1.length() + 4, chunk_messages_received.get(current_index).length);
+                        System.out.println("Writing - " + new String(dataToWrite));
+                        fos.write(dataToWrite); //get message after "\r\n\r\n"
                         chunk_messages_received.remove(current_index);
                         current_index--;
-                        return data_to_write.length();
+                        return dataToWrite.length;
                     } catch (IOException e) {
                         System.err.println("Error writing to file.");
                     }
-
                 }
                 current_index++;
             } else {
@@ -66,7 +67,8 @@ public class RestoreSend extends Thread {
 
     private void remove_messages_from_buffer() { //remove the other chunk messages that weren't needed
         for (int i = 0; i < chunk_messages_received.size(); i++) {
-            String[] split = chunk_messages_received.get(i).split(" ");
+            String message_1 = new String(chunk_messages_received.get(i)).substring(0, new String(chunk_messages_received.get(i)).lastIndexOf("\r\n\r\n"));
+            String[] split = message_1.split(" ");
             if (split[1].equals(new String(file_id)))
                 chunk_messages_received.remove(i);
         }

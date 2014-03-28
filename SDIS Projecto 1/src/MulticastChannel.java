@@ -11,9 +11,10 @@ public class MulticastChannel extends Thread {
     private int port;
     private MulticastSocket m_socket;
     private int MAX_BUFFER_SIZE = 64200;
-    private ArrayList<String> buffer;
+    private ArrayList<byte[]> buffer;
+    byte[] data;
 
-    public MulticastChannel(String ip, int port, ArrayList<String> buffer, String id) {
+    public MulticastChannel(String ip, int port, ArrayList<byte[]> buffer, String id) {
         if (MulticastProcessor.LOG)
             System.out.println("[" + id + "] Creating IP - " + ip + " Port - " + port);
         this.ip = ip;
@@ -49,26 +50,28 @@ public class MulticastChannel extends Thread {
         DatagramPacket recv = new DatagramPacket(buf, buf.length);
         try {
             m_socket.receive(recv);
+            data = new byte[recv.getLength()];
+            System.arraycopy(recv.getData(),0,data,0,recv.getLength());
         } catch (IOException e) {
             System.err.println("Failed trying to listen in Multicast Control channel. Exiting"); //TODO Error Control?
             System.exit(-1);
         }
         if (MulticastProcessor.LOG)
-            System.out.println("[" + id + "] Processing - " + new String(recv.getData()).substring(0, recv.getLength()));
+            System.out.println("[" + id + "] Processing - " + new String(recv.getData()));
         if(!MulticastProcessor.ACCEPT_SAME_MACHINE_PACKETS)  {
             try {
                 if(!recv.getAddress().getHostAddress().equals(InetAddress.getLocalHost().getHostAddress()))  {
-                    buffer.add(new String(recv.getData()).substring(0, recv.getLength()));
+                    buffer.add(data);
                 } else {
                     if(MulticastProcessor.LOG)
                         System.out.println("[MulticastChannel] Rejecting packet because it was sent from the same machine");
                 }
             } catch (UnknownHostException e) {
                 System.err.println("Can't find own ip, accepting all packets.");
-                buffer.add(new String(recv.getData()).substring(0, recv.getLength()));
+                buffer.add(recv.getData());
             }
         } else
-            buffer.add(new String(recv.getData()).substring(0, recv.getLength()));
+            buffer.add(data);
     }
 
     public void run() {

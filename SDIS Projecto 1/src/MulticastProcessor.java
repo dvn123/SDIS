@@ -33,9 +33,9 @@ public class MulticastProcessor {
     public static final int MAX_CHUNK_SIZE = 64000;
     final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
 
-    ArrayList<String> buffer;
+    ArrayList<byte[]> buffer;
     ArrayList<String> stored_messages;
-    ArrayList<String> chunk_messages;
+    ArrayList<byte[]> chunk_messages;
 
     float space;
     String path;
@@ -52,9 +52,9 @@ public class MulticastProcessor {
         if (LOG)
             System.out.println("[MulticastProcessor] Initializing.");
 
-        buffer = new ArrayList<String>();
+        buffer = new ArrayList<byte[]>();
         stored_messages = new ArrayList<String>();
-        chunk_messages = new ArrayList<String>();
+        chunk_messages = new ArrayList<byte[]>();
         this.space = space;
         this.path = path;
 
@@ -185,13 +185,15 @@ public class MulticastProcessor {
         return hexChars;
     }
 
-    private int process_message(String message) {
-        if (message.toLowerCase().equals(message)) { //keyboard commands are always lower case
-            process_keyboard_command(message);
+    private int process_message(byte[] message) {
+        if (new String(message).toLowerCase().equals(new String(message))) { //keyboard commands are always lower case
+            process_keyboard_command(new String(message));
             return 0;
         }
 
-        String[] msg = message.split(" ");
+        String message_1 = new String(message).substring(0, new String(message).lastIndexOf("\r\n\r\n"));
+
+        String[] msg = message_1.split(" ");
 
         if (!msg[1].equals(VERSION)) {
             System.out.println("Protocol versions do not match. Command aborted.");
@@ -206,11 +208,11 @@ public class MulticastProcessor {
             }
             return 0;
         } else if (msg[0].equals("GETCHUNK")) {
-            RestoreReceive rr = new RestoreReceive(mcrs, message, chunk_messages, path);
+            RestoreReceive rr = new RestoreReceive(mcrs, message_1, chunk_messages, path);
             rr.start();
             return 0;
         } else if (msg[0].equals("STORED")) {
-            stored_messages.add(message); //stored messages are handled by the running backupsend processes, this buffer is passed on to them
+            stored_messages.add(message_1); //stored messages are handled by the running backupsend processes, this buffer is passed on to them
             return 0;
         } else if (msg[0].equals("CHUNK")) {
             chunk_messages.add(message); //chunk messages are handled by RestoreReceive and RestoreSend
@@ -276,9 +278,9 @@ public class MulticastProcessor {
     public void process_commands() {
         while (true) {
             if (!buffer.isEmpty()) {
-                String line = buffer.get(0);
+                byte[] line = buffer.get(0);
                 if (LOG)
-                    System.out.println("[MulticastProcessor] Processing " + buffer.get(0));
+                    System.out.println("[MulticastProcessor] Processing " + new String(buffer.get(0)));
                 buffer.remove(0);
                 process_message(line);
             } else {

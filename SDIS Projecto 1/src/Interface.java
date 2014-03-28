@@ -5,9 +5,9 @@ public class Interface extends Thread {
     private MulticastMessageSender mcs;
     private MulticastMessageSender mcrs;
     private MulticastMessageSender mcbs;
-    private ArrayList<String> buffer;
+    private ArrayList<byte[]> buffer;
 
-    Interface(ArrayList<String> buffer) {
+    Interface(ArrayList<byte[]> buffer) {
         this.buffer = buffer;
     }
 
@@ -17,7 +17,7 @@ public class Interface extends Thread {
         Scanner s = new Scanner(System.in);
         while (true) {
             String s1 = s.nextLine();
-            buffer.add(s1.toLowerCase());
+            buffer.add(s1.toLowerCase().getBytes());
         }
     }
 

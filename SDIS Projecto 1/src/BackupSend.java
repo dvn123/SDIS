@@ -77,13 +77,16 @@ public class BackupSend extends Thread {
 
 
             while ((read = fis.read(buffer)) != -1) {
-                if(MulticastProcessor.LOG)
-                    System.out.println("[BackupSend] Length of buffer - " + buffer.length + " - N of bytes read - " + read + " String buffer length - " + new String(buffer, "UTF-8").length());
-                String message = "PUTCHUNK " + MulticastProcessor.VERSION + " " + new String(file_id) + " " + (chunkCount) + " " + rep_degree + " " + "\r\n\r\n" + new String(buffer, "UTF-8").substring(0,read);
-                if (MulticastProcessor.LOG)
-                    System.out.println("[BackupSend] Message Length - " + message.length() + " Read - " + read + " Reading file - " + message);
+                //String message = "PUTCHUNK " + MulticastProcessor.VERSION + " " + new String(file_id) + " " + (chunkCount) + " " + rep_degree + " " + "\r\n\r\n" + new String(buffer, "UTF-8").substring(0,read);
+                byte[] one = ("PUTCHUNK " + MulticastProcessor.VERSION + " " + new String(file_id) + " " + (chunkCount) + " " + rep_degree + " " + "\r\n\r\n").getBytes();
+                byte[] combined = new byte[one.length + read];
 
-                mcbs.send_message(message);
+                System.arraycopy(one,0,combined,0,one.length);
+                System.arraycopy(buffer,0,combined,one.length,read);
+                if (MulticastProcessor.LOG)
+                    System.out.println("[BackupSend] Message Length - " + combined.length + " Read - " + read + " Reading file - " + new String(combined));
+
+                mcbs.send_message(combined);
                 boolean a = false;
                 long time_to_wait = INITIAL_TIME_TO_WAIT;
                 while (!a && time_to_wait <= MAX_LIMIT_TIME_TO_WAIT) {
