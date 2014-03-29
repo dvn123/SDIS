@@ -33,7 +33,7 @@ public class RestoreSend extends Thread {
         while (System.currentTimeMillis() < end) {
             //System.out.println(" SIZE - " + chunk_messages_received.size() + " - CurrentIndex - " + current_index);
             if (chunk_messages_received.size() > current_index) {
-                String message_1 = new String(chunk_messages_received.get(current_index)).substring(0, new String(chunk_messages_received.get(current_index)).lastIndexOf("\r\n\r\n"));
+                String message_1 = new String(chunk_messages_received.get(current_index)).substring(0, new String(chunk_messages_received.get(current_index)).indexOf("\r\n\r\n"));
                 String[] split = message_1.split("\\s+");
                 //System.out.println(split[2].equals(new String(file_id)));
                 //System.out.println("split[3] - " + split[3] + " current_chunk " + (char) current_chunk_n);
@@ -80,7 +80,6 @@ public class RestoreSend extends Thread {
 
         try {
             fos = new FileOutputStream(file_name);
-            byte[] buffer = new byte[MulticastProcessor.MAX_CHUNK_SIZE];
             if (MulticastProcessor.LOG)
                 System.out.println("[RestoreSend] Copying file using streams");
             while (true) {

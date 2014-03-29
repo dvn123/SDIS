@@ -16,7 +16,7 @@ public class BackupReceive extends Thread {
         this.mcs = mcs;
         this.path = path;
 
-        String message_1 = new String(msg_received).substring(0, new String(msg_received).lastIndexOf("\r\n\r\n"));
+        String message_1 = new String(msg_received).substring(0, new String(msg_received).indexOf("\r\n\r\n"));
         System.out.println("[BackupReceive] Message 1 - " + message_1);
         split_msg = message_1.split(" ");
 

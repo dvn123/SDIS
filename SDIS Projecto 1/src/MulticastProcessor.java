@@ -1,6 +1,4 @@
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
+import java.io.*;
 import java.net.MulticastSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,9 +10,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Scanner;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Iterator;
+import java.util.Map;
 
 public class MulticastProcessor {
     public static final boolean LOG = true;
@@ -47,6 +44,7 @@ public class MulticastProcessor {
     private MulticastChannel mc;
     private MulticastChannel mcb;
     private MulticastChannel mcr;
+    Interface i;
 
     MulticastProcessor(String multicast_control_ip, int multicast_control_port, String multicast_data_backup_ip, int multicast_data_backup_port, String multicast_data_restore_ip, int multicast_data_restore_port, int space, String path) {
         if (LOG)
@@ -60,8 +58,9 @@ public class MulticastProcessor {
 
         initialize_multicast_channels(multicast_control_ip, multicast_control_port, multicast_data_backup_ip, multicast_data_backup_port, multicast_data_restore_ip, multicast_data_restore_port);
         //read_file();
-        Interface i = new Interface(buffer);
+        i = new Interface(buffer);
         i.start();
+        read_map();
     }
 
     public static void main(String[] args) {
@@ -96,62 +95,40 @@ public class MulticastProcessor {
         if (LOG)
             System.out.println("[MulticastProcessor] Created Multicast Data RestoreReceive");
     }
-    /*
-    public void read_file() {
-        final File file = new File("conf");
 
-        final Scanner scanner;
+    private void read_map() {
         try {
-            scanner = new Scanner(file);
-            Pattern p1 = Pattern.compile("SPACE: (.*)");
-            Pattern p2 = Pattern.compile("PATH: (.*)");
-            while (scanner.hasNextLine()) {
-                String line = scanner.nextLine();
-                Matcher m1 = p1.matcher(line);
-                Matcher m2 = p2.matcher(line);
-                if (m1.find()) {
-                    space = Float.parseFloat(m1.group(1));
-                    remaining_space = space;
-                    if (LOG)
-                        System.out.println("[MulticastProcessor] Space - " + space);
-                }
-                if (m2.find()) {
-                    homeDir = m2.group(1);
-                    if (LOG)
-                        System.out.println("[MulticasProcessor] HomeDir - " + homeDir);
-                }
+            File file = new File("map");
+            BufferedReader reader = new BufferedReader(new FileReader(file));
+            Iterator it = file_ids.entrySet().iterator();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+                file_ids.put(line.substring(0,line.indexOf(":")), line.substring(line.indexOf(":") + 1).toCharArray());
             }
         } catch (FileNotFoundException e) {
-            System.out.println("Configuration file not found. Using default space of 128MB");
+            //e.printStackTrace();
+        } catch (IOException e) {
+            //e.printStackTrace();
         }
     }
 
-    public void read_chunks_id() {
-        final File file = new File("id_chunks");
-
-        final Scanner scanner;
+    private void write_map() {
+        System.out.println("[MulticastProcessor] Writing to map");
         try {
-            scanner = new Scanner(file);
-            Pattern p = Pattern.compile("SPACE: (.*)");
-            while (scanner.hasNextLine()) {
-                String line = scanner.nextLine();
-                Matcher m = p.matcher(line);
-                if (m.find()) {
-                    space = Float.parseFloat(m.group(1));
-                    remaining_space = space;
-                    if (LOG)
-                        System.out.println("[MulticastProcessor] Space - " + space);
-                }
+            FileOutputStream fos = new FileOutputStream("map");
+            Iterator it = file_ids.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry pairs = (Map.Entry)it.next();
+                System.out.println("[MulticastProcessor] Writing to map 1- " + pairs.getKey() + " 2- " + new String((char[]) pairs.getValue()));
+                fos.write((pairs.getKey().toString() + ":" + new String((char[]) pairs.getValue())).getBytes());
             }
         } catch (FileNotFoundException e) {
-            System.out.println("Configuration file not found. Using default space of 128MB");
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
-
-    /*void write_chunks_map(String key, String ) {
-        FileOutputStream fos = new FileOutputStream("id_chunks");
-        fos.write
-    }  */
 
     private char[] create_file_id(File file) {
         Path p = Paths.get(file.getAbsolutePath());
@@ -270,6 +247,17 @@ public class MulticastProcessor {
                 return;
             }
 
+            return;
+        } else if (commands[0].equals("exit")) {
+            write_map();
+            mc.close();
+            mcb.close();
+            mcr.close();
+            i.close();
+            mcs.close();
+            mcbs.close();
+            mcrs.close();
+            System.exit(0);
             return;
         }
         System.err.println("Invalid command, try again.");

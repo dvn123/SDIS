@@ -53,8 +53,8 @@ public class MulticastChannel extends Thread {
             data = new byte[recv.getLength()];
             System.arraycopy(recv.getData(),0,data,0,recv.getLength());
         } catch (IOException e) {
-            System.err.println("Failed trying to listen in Multicast Control channel. Exiting"); //TODO Error Control?
-            System.exit(-1);
+            System.err.println("Failed trying to listen in channel. Exiting"); //TODO Error Control?
+            //System.exit(-1);
         }
         if (MulticastProcessor.LOG)
             System.out.println("[" + id + "] Processing - " + new String(recv.getData()));
@@ -78,5 +78,10 @@ public class MulticastChannel extends Thread {
         while (true) {
             listen();
         }
+    }
+
+    public void close() {
+        m_socket.close();
+        System.exit(0);
     }
 }

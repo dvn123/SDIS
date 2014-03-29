@@ -62,4 +62,9 @@ public class MulticastMessageSender {
             System.err.println("Failed to send message. " + e);
         }
     }
+
+    public void close() {
+        m_socket.close();
+        System.exit(0);
+    }
 }
