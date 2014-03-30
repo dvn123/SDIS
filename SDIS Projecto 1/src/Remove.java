@@ -2,9 +2,15 @@ import java.io.File;
 import java.util.Vector;
 
 public class Remove {
-    static Vector<String> deletedFiles;
 
-    public static long freeSpace(long sizeToDelete) {
+    MulticastMessageSender mcs;
+
+    public Remove(MulticastMessageSender mcs) {
+        this.mcs = mcs;
+    }
+
+
+    public long freeSpace(long sizeToDelete) {
 
         File dir = new File(MulticastProcessor.homeDir);
 
@@ -16,7 +22,8 @@ public class Remove {
 
         File[]  dirFiles = dir.listFiles();
         long deletedSize = 0;
-        deletedFiles = new Vector<String>();
+
+        Vector<String> deletedFiles = new Vector<String>();
 
         for (File file : dirFiles) {
 
@@ -32,6 +39,14 @@ public class Remove {
                 deletedSize += file.length();
                 file.delete();
             }
+        }
+
+        for(int i = 0; i < deletedFiles.size(); i++)
+        {
+            String[] split = deletedFiles.elementAt(i).split("-");
+            String return_msg = "REMOVED " + MulticastProcessor.VERSION + " " + split[0] + " " + split[1] + " \r\n\r\n";
+
+            mcs.send_message(return_msg);
         }
 
         if(deletedSize < sizeToDelete)
