@@ -230,6 +230,24 @@ public class MulticastProcessor {
         return hexChars;
     }
 
+    private void clear_space() {
+        Iterator it = chunk_stored_degree.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry pairs = (Map.Entry)it.next();
+            System.out.println("[MulticastProcessor] Writing to map 1- " + pairs.getKey() + " 2- " + new String((char[]) pairs.getValue()));
+            String file_id = ((String) pairs.getKey()).substring(((String) pairs.getKey()).indexOf(":"));
+            if((Integer) pairs.getValue() > file_rep_degree.get(file_id)) {
+                File file = new File(path + "/" + pairs.getKey());
+                long size = file.length();
+                if(file.delete()){
+                    space -= size;
+                }else{
+                    System.out.println("Delete operation has failed.");
+                }
+            }
+        }
+    }
+
     private int process_message(byte[] message) {
         if (new String(message).toLowerCase().equals(new String(message))) { //keyboard commands are always lower case
             process_keyboard_command(new String(message));
@@ -364,6 +382,8 @@ public class MulticastProcessor {
 
     public void process_commands() {
         while (true) {
+            if(space < 1024)
+                clear_space();
             if (!buffer.isEmpty()) {
                 byte[] line = buffer.get(0);
                 if (LOG)
