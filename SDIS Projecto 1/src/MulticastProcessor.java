@@ -282,7 +282,7 @@ public class MulticastProcessor {
             return 0;
         } else if (msg[0].equals("STORED")) {
             if (chunk_stored_degree.containsKey(msg[2] + "-" + msg[3])) {
-                chunk_stored_degree.replace(msg[2] + "-" + msg[3], chunk_stored_degree.get(msg[2] + "-" + msg[3]) + 1);
+                chunk_stored_degree.put(msg[2] + "-" + msg[3], chunk_stored_degree.get(msg[2] + "-" + msg[3]) + 1);
             } else {
                 chunk_stored_degree.put(msg[2] + "-" + msg[3], 1);
             }
@@ -299,13 +299,13 @@ public class MulticastProcessor {
                         System.out.println("[MulticastProcessor] Adding STORED to buffer");
                     stored_messages.add(message_1); //stored messages are handled by the running backupsend processes, this buffer is passed on to them
                     ips.add(recv.getAddress().getHostAddress());
-                    chunk_ip.replace(msg[2] + "-" + msg[3], ips);
+                    chunk_ip.put(msg[2] + "-" + msg[3], ips);
                 }
             } else {
                 stored_messages.add(message_1);
                 ArrayList<String> s = new ArrayList<String>();
                 s.add(recv.getAddress().getHostAddress());
-                chunk_ip.replace(msg[2] + "-" + msg[3], s);
+                chunk_ip.put(msg[2] + "-" + msg[3], s);
             }
             return 0;
         } else if (msg[0].equals("CHUNK")) {
@@ -322,7 +322,7 @@ public class MulticastProcessor {
                     ips.remove(recv.getAddress().getHostAddress());
                 }
             }
-            chunk_stored_degree.replace(msg[2] + "-" + msg[3], chunk_stored_degree.get(msg[2] + "-" + msg[3]) - 1);
+            chunk_stored_degree.put(msg[2] + "-" + msg[3], chunk_stored_degree.get(msg[2] + "-" + msg[3]) - 1);
             if (chunk_stored_degree.get(msg[2] + "-" + msg[3]) < file_rep_degree.get(msg[2])) { //if chunk < rep_degree
                 try {
                     Thread.sleep(100 + (int) (Math.random() * ((400 - 100) + 1)));
