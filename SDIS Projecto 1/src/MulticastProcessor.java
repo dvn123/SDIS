@@ -29,25 +29,23 @@ public class MulticastProcessor {
 
     public static final int MAX_CHUNK_SIZE = 64000;
     final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
-
+    public static String homeDir;
     ArrayList<byte[]> buffer;
     ArrayList<String> stored_messages;
     ArrayList<String> putchunk_messages;
     ArrayList<byte[]> chunk_messages;
-
     float space;
     String path;
-    public static String homeDir;
     MulticastMessageSender mcs;
     MulticastMessageSender mcbs;
     MulticastMessageSender mcrs;
     HashMap<String, char[]> file_ids = new HashMap<String, char[]>();
     HashMap<String, Integer> file_rep_degree = new HashMap<String, Integer>();
     HashMap<String, Integer> chunk_stored_degree = new HashMap<String, Integer>();
+    Interface i;
     private MulticastChannel mc;
     private MulticastChannel mcb;
     private MulticastChannel mcr;
-    Interface i;
 
     MulticastProcessor(String multicast_control_ip, int multicast_control_port, String multicast_data_backup_ip, int multicast_data_backup_port, String multicast_data_restore_ip, int multicast_data_restore_port, int space, String path) {
         if (LOG)
@@ -56,6 +54,7 @@ public class MulticastProcessor {
         buffer = new ArrayList<byte[]>();
         stored_messages = new ArrayList<String>();
         chunk_messages = new ArrayList<byte[]>();
+        putchunk_messages = new ArrayList<String>();
         this.space = space;
         this.path = path;
 
@@ -103,9 +102,10 @@ public class MulticastProcessor {
             File file = new File("map");
             BufferedReader reader = new BufferedReader(new FileReader(file));
             String line;
+            space = Integer.parseInt(reader.readLine());
+            System.out.println("space - " + space);
             while ((line = reader.readLine()) != null) {
-                System.out.println(line);
-                file_ids.put(line.substring(0,line.indexOf(":")), line.substring(line.indexOf(":") + 1).toCharArray());
+                file_ids.put(line.substring(0, line.indexOf(":")), line.substring(line.indexOf(":") + 1).toCharArray());
             }
         } catch (FileNotFoundException e) {
             //e.printStackTrace();
@@ -120,8 +120,7 @@ public class MulticastProcessor {
             BufferedReader reader = new BufferedReader(new FileReader(file));
             String line;
             while ((line = reader.readLine()) != null) {
-                System.out.println(line);
-                file_rep_degree.put(line.substring(0,line.indexOf(":")), Integer.parseInt(line.substring(line.indexOf(":") + 1)));
+                file_rep_degree.put(line.substring(0, line.indexOf(":")), Integer.parseInt(line.substring(line.indexOf(":") + 1)));
             }
         } catch (FileNotFoundException e) {
             //e.printStackTrace();
@@ -137,8 +136,7 @@ public class MulticastProcessor {
             Iterator it = chunk_stored_degree.entrySet().iterator();
             String line;
             while ((line = reader.readLine()) != null) {
-                System.out.println(line);
-                chunk_stored_degree.put(line.substring(0,line.indexOf(":")), Integer.parseInt(line.substring(line.indexOf(":") + 1)));
+                chunk_stored_degree.put(line.substring(0, line.indexOf(":")), Integer.parseInt(line.substring(line.indexOf(":") + 1)));
             }
         } catch (FileNotFoundException e) {
             //e.printStackTrace();
@@ -153,7 +151,7 @@ public class MulticastProcessor {
             FileOutputStream fos = new FileOutputStream("file_rep_degree");
             Iterator it = file_rep_degree.entrySet().iterator();
             while (it.hasNext()) {
-                Map.Entry pairs = (Map.Entry)it.next();
+                Map.Entry pairs = (Map.Entry) it.next();
                 System.out.println("[MulticastProcessor] Writing to file_rep_degree 1- " + pairs.getKey() + " 2- " + pairs.getValue());
                 fos.write((pairs.getKey().toString() + ":" + pairs.getValue() + "\n").getBytes());
             }
@@ -170,7 +168,7 @@ public class MulticastProcessor {
             FileOutputStream fos = new FileOutputStream("chunk_stored_degree");
             Iterator it = chunk_stored_degree.entrySet().iterator();
             while (it.hasNext()) {
-                Map.Entry pairs = (Map.Entry)it.next();
+                Map.Entry pairs = (Map.Entry) it.next();
                 System.out.println("[MulticastProcessor] Writing to chunk_stored_degree 1- " + pairs.getKey() + " 2- " + pairs.getValue());
                 fos.write((pairs.getKey().toString() + ":" + pairs.getValue() + "\n").getBytes());
             }
@@ -185,9 +183,10 @@ public class MulticastProcessor {
         System.out.println("[MulticastProcessor] Writing to map");
         try {
             FileOutputStream fos = new FileOutputStream("map");
+            fos.write((space + "\n").getBytes());
             Iterator it = file_ids.entrySet().iterator();
             while (it.hasNext()) {
-                Map.Entry pairs = (Map.Entry)it.next();
+                Map.Entry pairs = (Map.Entry) it.next();
                 System.out.println("[MulticastProcessor] Writing to map 1- " + pairs.getKey() + " 2- " + new String((char[]) pairs.getValue()));
                 fos.write((pairs.getKey().toString() + ":" + new String((char[]) pairs.getValue()) + "\n").getBytes());
             }
@@ -233,15 +232,15 @@ public class MulticastProcessor {
     private void clear_space() {
         Iterator it = chunk_stored_degree.entrySet().iterator();
         while (it.hasNext()) {
-            Map.Entry pairs = (Map.Entry)it.next();
+            Map.Entry pairs = (Map.Entry) it.next();
             System.out.println("[MulticastProcessor] Writing to map 1- " + pairs.getKey() + " 2- " + new String((char[]) pairs.getValue()));
             String file_id = ((String) pairs.getKey()).substring(((String) pairs.getKey()).indexOf(":"));
-            if((Integer) pairs.getValue() > file_rep_degree.get(file_id)) {
+            if ((Integer) pairs.getValue() > file_rep_degree.get(file_id)) {
                 File file = new File(path + "/" + pairs.getKey());
                 long size = file.length();
-                if(file.delete()){
+                if (file.delete()) {
                     space -= size;
-                }else{
+                } else {
                     System.out.println("Delete operation has failed.");
                 }
             }
@@ -255,9 +254,7 @@ public class MulticastProcessor {
         }
 
         String message_1 = new String(message).substring(0, new String(message).lastIndexOf("\r\n\r\n"));
-
         String[] msg = message_1.split(" ");
-
         if (!msg[1].equals(VERSION)) {
             System.out.println("Protocol versions do not match. Command aborted.");
             return -1;
@@ -265,7 +262,7 @@ public class MulticastProcessor {
 
         if (msg[0].equals("PUTCHUNK")) {
             putchunk_messages.add(message_1);
-            if(space > 0) {
+            if (space > 0) {
                 BackupReceive b = new BackupReceive(mcs, message, space, path);
                 space -= b.getLength();
                 b.start();
@@ -276,7 +273,7 @@ public class MulticastProcessor {
             rr.start();
             return 0;
         } else if (msg[0].equals("STORED")) {
-            if(chunk_stored_degree.containsKey(msg[2] + "-" + msg[3])) {
+            if (chunk_stored_degree.containsKey(msg[2] + "-" + msg[3])) {
                 chunk_stored_degree.replace(msg[2] + "-" + msg[3], chunk_stored_degree.get(msg[2] + "-" + msg[3]) + 1);
             } else {
                 chunk_stored_degree.put(msg[2] + "-" + msg[3], 1);
@@ -292,19 +289,20 @@ public class MulticastProcessor {
             return 0;
         } else if (msg[0].equals("REMOVED")) {
             chunk_stored_degree.replace(msg[2] + "-" + msg[3], chunk_stored_degree.get(msg[2] + "-" + msg[3]) - 1);
-            if(chunk_stored_degree.get(msg[2] + "-" + msg[3]) < file_rep_degree.get(msg[2])) { //if chunk < rep_degree
+            if (chunk_stored_degree.get(msg[2] + "-" + msg[3]) < file_rep_degree.get(msg[2])) { //if chunk < rep_degree
                 try {
                     Thread.sleep(100 + (int) (Math.random() * ((400 - 100) + 1)));
-                } catch (InterruptedException e) { }
+                } catch (InterruptedException e) {
+                }
                 boolean a = false;
 
                 for (int j = 0; j < putchunk_messages.size(); j++) {
                     String[] m = putchunk_messages.get(j).split(" ");
-                    if(m[2].equals(msg[2]) && m[3].equals(msg[3]))
-                        a =true;
+                    if (m[2].equals(msg[2]) && m[3].equals(msg[3]))
+                        a = true;
                 }
                 putchunk_messages.clear();
-                if(!a) {
+                if (!a) {
                     File f = new File(path + "/" + msg[2] + "-" + msg[3]);
                     BackupSend bs = new BackupSend(mcbs, (msg[2]).toCharArray(), f, file_rep_degree.get(msg[2]) - chunk_stored_degree.get(msg[2] + "-" + msg[3]), stored_messages);
                     bs.start();
@@ -327,13 +325,15 @@ public class MulticastProcessor {
             }
 
             File f = new File(commands[1]);
-            if(f.exists()) {
+            if (f.exists()) {
                 char[] id = create_file_id(f);
                 if (id != null) {
                     file_rep_degree.put(new String(id), Integer.valueOf(commands[2]));
                     BackupSend bs = new BackupSend(mcbs, id, f, Integer.parseInt(commands[2]), stored_messages);
                     bs.start();
                 }
+            } else {
+                System.err.println("File does not exist");
             }
             return;
         } else if (commands[0].equals("restore")) {
@@ -341,7 +341,7 @@ public class MulticastProcessor {
                 System.err.println("Invalid command, try again.");
                 return;
             }
-            if(file_ids.get(commands[1]) != null) {
+            if (file_ids.get(commands[1]) != null) {
                 RestoreSend rs = new RestoreSend(mcs, commands[1], file_ids.get(commands[1]), chunk_messages);
                 rs.start();
             } else {
@@ -382,7 +382,7 @@ public class MulticastProcessor {
 
     public void process_commands() {
         while (true) {
-            if(space < 1024)
+            if (space < 1024)
                 clear_space();
             if (!buffer.isEmpty()) {
                 byte[] line = buffer.get(0);
