@@ -11,7 +11,7 @@ public class Interface extends Thread {
 
     private void keyboard() {
         System.out.println("Welcome to the Distributed File System\n");
-        System.out.println("Possible Commands:\nbackup <file_name> <number_of_copies>\nrestore <file_name>\ndelete file_name\nfree <n_bytes_to_free>");
+        System.out.println("Possible Commands:\nbackup <file_name> <number_of_copies>\nrestore <file_name>\ndelete file_name\nreclaim <n_bytes_to_free>\nexit");
         s = new Scanner(System.in);
         while (true) {
             String s1 = s.nextLine();
@@ -25,6 +25,5 @@ public class Interface extends Thread {
 
     public void close() {
         s.close();
-        System.exit(0);
     }
 }
