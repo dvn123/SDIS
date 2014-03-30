@@ -81,8 +81,8 @@ public class BackupSend extends Thread {
                 byte[] one = ("PUTCHUNK " + MulticastProcessor.VERSION + " " + new String(file_id) + " " + (chunkCount) + " " + rep_degree + " " + "\r\n\r\n").getBytes();
                 byte[] combined = new byte[one.length + read];
 
-                System.arraycopy(one,0,combined,0,one.length);
-                System.arraycopy(buffer,0,combined,one.length,read);
+                System.arraycopy(one, 0, combined, 0, one.length);
+                System.arraycopy(buffer, 0, combined, one.length, read);
                 if (MulticastProcessor.LOG)
                     System.out.println("[BackupSend] Message Length - " + combined.length + " Read - " + read + " Reading file - " + new String(combined));
 

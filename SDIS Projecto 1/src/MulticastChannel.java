@@ -6,13 +6,13 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 public class MulticastChannel extends Thread {
+    byte[] data;
     private String ip;
     private String id;
     private int port;
     private MulticastSocket m_socket;
     private int MAX_BUFFER_SIZE = 64200;
     private ArrayList<byte[]> buffer;
-    byte[] data;
 
     public MulticastChannel(String ip, int port, ArrayList<byte[]> buffer, String id) {
         if (MulticastProcessor.LOG)
@@ -51,19 +51,19 @@ public class MulticastChannel extends Thread {
         try {
             m_socket.receive(recv);
             data = new byte[recv.getLength()];
-            System.arraycopy(recv.getData(),0,data,0,recv.getLength());
+            System.arraycopy(recv.getData(), 0, data, 0, recv.getLength());
         } catch (IOException e) {
             System.err.println("Failed trying to listen in channel. Exiting"); //TODO Error Control?
             //System.exit(-1);
         }
         if (MulticastProcessor.LOG)
             System.out.println("[" + id + "] Processing - " + new String(recv.getData()));
-        if(!MulticastProcessor.ACCEPT_SAME_MACHINE_PACKETS)  {
+        if (!MulticastProcessor.ACCEPT_SAME_MACHINE_PACKETS) {
             try {
-                if(!recv.getAddress().getHostAddress().equals(InetAddress.getLocalHost().getHostAddress()))  {
+                if (!recv.getAddress().getHostAddress().equals(InetAddress.getLocalHost().getHostAddress())) {
                     buffer.add(data);
                 } else {
-                    if(MulticastProcessor.LOG)
+                    if (MulticastProcessor.LOG)
                         System.out.println("[MulticastChannel] Rejecting packet because it was sent from the same machine");
                 }
             } catch (UnknownHostException e) {

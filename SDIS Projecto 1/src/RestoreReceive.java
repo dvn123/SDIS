@@ -73,8 +73,8 @@ public class RestoreReceive extends Thread {
         byte[] one = ("CHUNK " + MulticastProcessor.VERSION + " " + split_msg[2] + " " + split_msg[3] + "\r\n\r\n").getBytes();
         byte[] combined = new byte[one.length + read];
 
-        System.arraycopy(one,0,combined,0,one.length);
-        System.arraycopy(data,0,combined,one.length,read);
+        System.arraycopy(one, 0, combined, 0, one.length);
+        System.arraycopy(data, 0, combined, one.length, read);
         if (MulticastProcessor.LOG)
             System.out.println("[RestoreReceive] answer: " + answer);
         mcrs.send_message(combined);

@@ -1,4 +1,6 @@
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.Arrays;
 
 public class BackupReceive extends Thread {
@@ -10,7 +12,7 @@ public class BackupReceive extends Thread {
     String path;
 
     BackupReceive(MulticastMessageSender mcs, byte[] msg_received, float remaining_space, String path) {
-        if(MulticastProcessor.LOG)
+        if (MulticastProcessor.LOG)
             System.out.println("[BackupReceive] Initializing");
 
         this.mcs = mcs;
@@ -27,22 +29,27 @@ public class BackupReceive extends Thread {
         not_enough_space = false;
         dataToWrite = Arrays.copyOfRange(msg_received, message_1.length() + 4, msg_received.length);
         test = new String(dataToWrite);
-        if(MulticastProcessor.LOG)
-           System.out.println("[BackupReceive] !!! dataToWrite - " + test);
-        if(dataToWrite.length > remaining_space)  {
+        if (MulticastProcessor.LOG)
+            System.out.println("[BackupReceive] !!! dataToWrite - " + test);
+        if (dataToWrite.length > remaining_space) {
             not_enough_space = true;
             System.err.println("[BackupReceive] Not enough space to backup");
         }
     }
 
     public float getLength() {
-        if(not_enough_space)
+        if (not_enough_space)
             return 0;
         return dataToWrite.length;
     }
 
     private void backup_chunk() {
         File f = new File(path);
+        if(f.exists()) {
+            if(MulticastProcessor.LOG)
+                System.out.println("[BackupReceive] File already exists, not backing up.");
+            return;
+        }
         f.mkdirs();
         try {
             FileOutputStream out = new FileOutputStream(path + "/" + split_msg[2] + "-" + split_msg[3]);
@@ -50,27 +57,26 @@ public class BackupReceive extends Thread {
             out.write(dataToWrite);
             out.flush();
             out.close();
+            send_message();
         } catch (IOException e) {
             System.out.println("Error outputting to file.");
         }
     }
 
     public void run() {
-        if(not_enough_space)
+        if (not_enough_space)
             return;
         try {
             Thread.sleep(100 + (int) (Math.random() * ((400 - 100) + 1)));
         } catch (InterruptedException e) {
             System.out.println("Error sleeping.");
         }
-
         backup_chunk();
-        send_message();
     }
 
     private void send_message() {
         String answer = "STORED " + MulticastProcessor.VERSION + " " + split_msg[2] + " " + split_msg[3] + "\r\n\r\n";
-        if(MulticastProcessor.LOG)
+        if (MulticastProcessor.LOG)
             System.out.println("[BackupReceive] answer: " + answer);
         mcs.send_message(answer);
         try {

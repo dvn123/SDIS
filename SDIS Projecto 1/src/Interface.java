@@ -2,8 +2,8 @@ import java.util.ArrayList;
 import java.util.Scanner;
 
 public class Interface extends Thread {
-    private ArrayList<byte[]> buffer;
     Scanner s;
+    private ArrayList<byte[]> buffer;
 
     Interface(ArrayList<byte[]> buffer) {
         this.buffer = buffer;
