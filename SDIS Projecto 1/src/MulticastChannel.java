@@ -86,6 +86,5 @@ public class MulticastChannel extends Thread {
 
     public void close() {
         m_socket.close();
-        System.exit(0);
     }
 }

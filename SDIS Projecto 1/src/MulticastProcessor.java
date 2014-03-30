@@ -18,7 +18,7 @@ import java.util.Map;
 public class MulticastProcessor {
     public static final boolean LOG = true;
     public static final boolean ACCEPT_SAME_MACHINE_PACKETS = false;
-    public static final String VERSION = "0.5";
+    public static final String VERSION = "1.0";
 
     public static final int MULTICAST_CONTROL_IP_POS = 0;
     public static final int MULTICAST_CONTROL_PORT_POS = 1;
@@ -342,9 +342,6 @@ public class MulticastProcessor {
                     bs.start();
                 }
             }
-            //Remove r = new Remove();
-            //space -= r.freeSpace(10000);
-            //Return Msg Protocol Thingy
             return 0;
         }
         return -1;
@@ -389,12 +386,13 @@ public class MulticastProcessor {
             //get file identifier
             //TODO
             return;
-        } else if (commands[0].equals("free")) {
+        } else if (commands[0].equals("reclaim")) {
             if (commands.length != 2) {
                 System.err.println("Invalid command, try again.");
                 return;
             }
-
+            Remove r = new Remove(mcs);
+            space -= r.freeSpace(Long.parseLong(commands[1]));
             return;
         } else if (commands[0].equals("exit")) {
             write_map();

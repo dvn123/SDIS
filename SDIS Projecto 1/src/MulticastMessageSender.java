@@ -65,6 +65,5 @@ public class MulticastMessageSender {
 
     public void close() {
         m_socket.close();
-        System.exit(0);
     }
 }
