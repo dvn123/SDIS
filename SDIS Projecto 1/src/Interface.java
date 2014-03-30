@@ -3,9 +3,9 @@ import java.util.Scanner;
 
 public class Interface extends Thread {
     Scanner s;
-    private ArrayList<byte[]> buffer;
+    private ArrayList<String> buffer;
 
-    Interface(ArrayList<byte[]> buffer) {
+    Interface(ArrayList<String> buffer) {
         this.buffer = buffer;
     }
 
@@ -15,7 +15,7 @@ public class Interface extends Thread {
         s = new Scanner(System.in);
         while (true) {
             String s1 = s.nextLine();
-            buffer.add(s1.toLowerCase().getBytes());
+            buffer.add(s1.toLowerCase());
         }
     }
 
