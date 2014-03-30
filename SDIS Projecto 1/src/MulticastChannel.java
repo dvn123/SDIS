@@ -61,6 +61,8 @@ public class MulticastChannel extends Thread {
             System.out.println("[" + id + "] Processing - " + new String(recv.getData()));
         if (!MulticastProcessor.ACCEPT_SAME_MACHINE_PACKETS) {
             try {
+                if(MulticastProcessor.LOG)
+                    System.out.println("[MulticastProcessor] Comparing - " + recv.getAddress().getHostAddress() + " - " + InetAddress.getLocalHost().getHostAddress());
                 if (!recv.getAddress().getHostAddress().equals(InetAddress.getLocalHost().getHostAddress())) {
                     buffer.add(recv);
                 } else {
@@ -71,8 +73,9 @@ public class MulticastChannel extends Thread {
                 System.err.println("Can't find own ip, accepting all packets.");
                 buffer.add(recv);
             }
-        } else
+        } else {
             buffer.add(recv);
+        }
     }
 
     public void run() {

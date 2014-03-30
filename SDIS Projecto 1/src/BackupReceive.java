@@ -44,14 +44,16 @@ public class BackupReceive extends Thread {
     }
 
     private void backup_chunk() {
-        File f = new File(path);
+        File f2 = new File(path);
+        f2.mkdirs();
+        File f = new File(path + "/" + split_msg[2] + "-" + split_msg[3]);
         if(f.exists()) {
             if(MulticastProcessor.LOG)
                 System.out.println("[BackupReceive] File already exists, not backing up.");
             send_message();
             return;
         }
-        f.mkdirs();
+
         try {
             FileOutputStream out = new FileOutputStream(path + "/" + split_msg[2] + "-" + split_msg[3]);
             System.out.println("WRITING - " + test.trim() + " - a " + test.trim().length());
@@ -68,10 +70,12 @@ public class BackupReceive extends Thread {
         if (not_enough_space)
             return;
         try {
+            System.out.println("");
             Thread.sleep(100 + (int) (Math.random() * ((400 - 100) + 1)));
         } catch (InterruptedException e) {
             System.out.println("Error sleeping.");
         }
+
         backup_chunk();
     }
 

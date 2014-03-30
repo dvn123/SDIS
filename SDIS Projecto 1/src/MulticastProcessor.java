@@ -17,7 +17,7 @@ import java.util.Map;
 
 public class MulticastProcessor {
     public static final boolean LOG = true;
-    public static final boolean ACCEPT_SAME_MACHINE_PACKETS = true;
+    public static final boolean ACCEPT_SAME_MACHINE_PACKETS = false;
     public static final String VERSION = "0.5";
 
     public static final int MULTICAST_CONTROL_IP_POS = 0;

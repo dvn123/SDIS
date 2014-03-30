@@ -61,10 +61,11 @@ public class RestoreReceive extends Thread {
             data = new byte[(int) file.length()];
             read = fis.read(data);
             fis.close();
+            send_message();
         } catch (FileNotFoundException e) {
-            System.exit(0); //if the chunk wasn't backed up on this pc
+            return;
         } catch (IOException e) {
-            System.exit(0); //if the chunk wasn't backed up on this pc
+            return;
         }
     }
 
@@ -106,6 +107,5 @@ public class RestoreReceive extends Thread {
         if (check_chunk_count() != 0)
             return;
         read_file();
-        send_message();
     }
 }
