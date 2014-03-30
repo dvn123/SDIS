@@ -1,4 +1,6 @@
 import java.io.*;
+import java.lang.reflect.Array;
+import java.net.DatagramPacket;
 import java.net.MulticastSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,10 +32,12 @@ public class MulticastProcessor {
     public static final int MAX_CHUNK_SIZE = 64000;
     final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
     public static String homeDir;
-    ArrayList<byte[]> buffer;
+    ArrayList<String> interface_buffer;
+    ArrayList<DatagramPacket> buffer;
     ArrayList<String> stored_messages;
     ArrayList<String> putchunk_messages;
     ArrayList<byte[]> chunk_messages;
+    HashMap<String,ArrayList<String> > chunk_ip;
     float space;
     String path;
     MulticastMessageSender mcs;
@@ -51,15 +55,17 @@ public class MulticastProcessor {
         if (LOG)
             System.out.println("[MulticastProcessor] Initializing.");
 
-        buffer = new ArrayList<byte[]>();
+        buffer = new ArrayList<DatagramPacket>();
         stored_messages = new ArrayList<String>();
         chunk_messages = new ArrayList<byte[]>();
         putchunk_messages = new ArrayList<String>();
+        chunk_ip = new HashMap<String, ArrayList<String>>();
+        interface_buffer = new ArrayList<String>();
         this.space = space;
         this.path = path;
 
         initialize_multicast_channels(multicast_control_ip, multicast_control_port, multicast_data_backup_ip, multicast_data_backup_port, multicast_data_restore_ip, multicast_data_restore_port);
-        i = new Interface(buffer);
+        i = new Interface(interface_buffer);
         i.start();
         read_map();
         read_chunk_stored_degree();
@@ -102,7 +108,7 @@ public class MulticastProcessor {
             File file = new File("map");
             BufferedReader reader = new BufferedReader(new FileReader(file));
             String line;
-            space = Integer.parseInt(reader.readLine());
+            space = Float.parseFloat(reader.readLine());
             System.out.println("space - " + space);
             while ((line = reader.readLine()) != null) {
                 file_ids.put(line.substring(0, line.indexOf(":")), line.substring(line.indexOf(":") + 1).toCharArray());
@@ -247,7 +253,10 @@ public class MulticastProcessor {
         }
     }
 
-    private int process_message(byte[] message) {
+    private int process_message(DatagramPacket recv) {
+        byte[] message = new byte[recv.getLength()];
+        System.arraycopy(recv.getData(), 0, message, 0, recv.getLength());
+
         if (new String(message).toLowerCase().equals(new String(message))) { //keyboard commands are always lower case
             process_keyboard_command(new String(message));
             return 0;
@@ -259,7 +268,6 @@ public class MulticastProcessor {
             System.out.println("Protocol versions do not match. Command aborted.");
             return -1;
         }
-
         if (msg[0].equals("PUTCHUNK")) {
             putchunk_messages.add(message_1);
             if (space > 0) {
@@ -278,7 +286,27 @@ public class MulticastProcessor {
             } else {
                 chunk_stored_degree.put(msg[2] + "-" + msg[3], 1);
             }
-            stored_messages.add(message_1); //stored messages are handled by the running backupsend processes, this buffer is passed on to them
+
+            if(chunk_ip.containsKey(msg[2] + "-" + msg[3])) {
+                boolean a = false;
+                ArrayList<String> ips = chunk_ip.get(msg[2] + "-" + msg[3]);
+                for (int j = 0; j < ips.size(); j++) {
+                    if (ips.get(j).equals(recv.getAddress().getHostAddress()))
+                        a = true;
+                }
+                if(!a) {//check if this ip has already backed up the chunk
+                    if(LOG)
+                        System.out.println("[MulticastProcessor] Adding STORED to buffer");
+                    stored_messages.add(message_1); //stored messages are handled by the running backupsend processes, this buffer is passed on to them
+                    ips.add(recv.getAddress().getHostAddress());
+                    chunk_ip.replace(msg[2] + "-" + msg[3], ips);
+                }
+            } else {
+                stored_messages.add(message_1);
+                ArrayList<String> s = new ArrayList<String>();
+                s.add(recv.getAddress().getHostAddress());
+                chunk_ip.replace(msg[2] + "-" + msg[3], s);
+            }
             return 0;
         } else if (msg[0].equals("CHUNK")) {
             chunk_messages.add(message); //chunk messages are handled by RestoreReceive and RestoreSend
@@ -288,6 +316,12 @@ public class MulticastProcessor {
             space -= d.delete_files();
             return 0;
         } else if (msg[0].equals("REMOVED")) {
+            if(chunk_ip.containsKey(msg[2] + "-" + msg[3])) {
+                ArrayList<String> ips = chunk_ip.get(msg[2] + "-" + msg[3]);
+                if(ips.contains(recv.getAddress().getHostAddress())) {
+                    ips.remove(recv.getAddress().getHostAddress());
+                }
+            }
             chunk_stored_degree.replace(msg[2] + "-" + msg[3], chunk_stored_degree.get(msg[2] + "-" + msg[3]) - 1);
             if (chunk_stored_degree.get(msg[2] + "-" + msg[3]) < file_rep_degree.get(msg[2])) { //if chunk < rep_degree
                 try {
@@ -323,7 +357,6 @@ public class MulticastProcessor {
                 System.err.println("Invalid command, try again.");
                 return;
             }
-
             File f = new File(commands[1]);
             if (f.exists()) {
                 char[] id = create_file_id(f);
@@ -384,10 +417,16 @@ public class MulticastProcessor {
         while (true) {
             if (space < 1024)
                 clear_space();
-            if (!buffer.isEmpty()) {
-                byte[] line = buffer.get(0);
+            if(!interface_buffer.isEmpty()) {
+                String line = interface_buffer.get(0);
                 if (LOG)
-                    System.out.println("[MulticastProcessor] Processing " + new String(buffer.get(0)));
+                    System.out.println("[MulticastProcessor] Processing " + line);
+                interface_buffer.remove(0);
+                process_keyboard_command(line);
+            } else if (!buffer.isEmpty()) {
+                DatagramPacket line = buffer.get(0);
+                if (LOG)
+                    System.out.println("[MulticastProcessor] Processing " + new String(line.getData()));
                 buffer.remove(0);
                 process_message(line);
             } else {

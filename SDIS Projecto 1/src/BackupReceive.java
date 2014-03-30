@@ -30,7 +30,7 @@ public class BackupReceive extends Thread {
         dataToWrite = Arrays.copyOfRange(msg_received, message_1.length() + 4, msg_received.length);
         test = new String(dataToWrite);
         if (MulticastProcessor.LOG)
-            System.out.println("[BackupReceive] !!! dataToWrite - " + test);
+            System.out.println("[BackupReceive] dataToWrite - " + test);
         if (dataToWrite.length > remaining_space) {
             not_enough_space = true;
             System.err.println("[BackupReceive] Not enough space to backup");
@@ -48,6 +48,7 @@ public class BackupReceive extends Thread {
         if(f.exists()) {
             if(MulticastProcessor.LOG)
                 System.out.println("[BackupReceive] File already exists, not backing up.");
+            send_message();
             return;
         }
         f.mkdirs();
